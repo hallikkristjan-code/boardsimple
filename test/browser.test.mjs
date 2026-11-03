@@ -34,3 +34,13 @@ test("openCommand falls back to the system opener without a Chromium browser", (
   assert.deepEqual(openCommand("http://x", { platform: "darwin", env: {}, exists: () => false }), ["open", ["http://x"]]);
   assert.deepEqual(openCommand("http://x", { platform: "linux", env: {}, exists: () => false }), ["xdg-open", ["http://x"]]);
 });
+
+test("openCommand gives the app window its own profile and a size on first launch only", () => {
+  const profile = join(PF, "..", "Users", "k", ".louend", "chrome-profile");
+  const fresh = openCommand("http://x", { platform: "win32", env: winEnv, exists: (p) => p === chrome, profileDir: profile })[1];
+  assert.ok(fresh.includes(`--user-data-dir=${profile}`));
+  assert.ok(fresh.some((a) => a.startsWith("--window-size=")));
+  const again = openCommand("http://x", { platform: "win32", env: winEnv, exists: (p) => p === chrome || p === profile, profileDir: profile })[1];
+  assert.ok(again.includes(`--user-data-dir=${profile}`));
+  assert.ok(!again.some((a) => a.startsWith("--window-size=")));
+});

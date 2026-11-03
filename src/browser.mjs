@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, delimiter } from "node:path";
 
 // Chromium-based browsers in preference order. Each supports `--app=URL`,
@@ -32,9 +33,20 @@ export function findAppBrowser({ platform = process.platform, env = process.env,
   return candidates(platform, env).find((p) => exists(p)) ?? null;
 }
 
+export const DEFAULT_PROFILE_DIR = join(homedir(), ".louend", "chrome-profile");
+
+// Own profile: the window is independent of the user's running browser
+// (always its own process and taskbar entry) and remembers its own size and
+// position. The size flag is only given on the first launch; after that the
+// profile's remembered bounds win.
 export function openCommand(url, opts = {}) {
   const browser = findAppBrowser(opts);
-  if (browser) return [browser, [`--app=${url}`, "--new-window", "--no-first-run", "--no-default-browser-check"]];
+  if (browser) {
+    const { profileDir = DEFAULT_PROFILE_DIR, exists = existsSync } = opts;
+    const args = [`--app=${url}`, `--user-data-dir=${profileDir}`, "--new-window", "--no-first-run", "--no-default-browser-check"];
+    if (!exists(profileDir)) args.push("--window-size=1400,900");
+    return [browser, args];
+  }
   const platform = opts.platform ?? process.platform;
   if (platform === "win32") return ["cmd", ["/c", "start", "", url]];
   if (platform === "darwin") return ["open", [url]];

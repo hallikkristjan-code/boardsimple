@@ -24,7 +24,8 @@ louend --port 5000 --no-open
 ```
 
 Lõuend avaneb eraldi aknas (Chrome, Edge, Chromium või Brave `--app`-režiimis): oma taskbar-kirje,
-Alt+Tab-is nähtav, tabide vahele ei kao. Kui ühtki neist pole, avaneb tavabrauseris.
+Alt+Tab-is nähtav, tabide vahele ei kao. Aknal on oma profiil (`~/.louend/chrome-profile`), nii et suurus ja
+asukoht jäävad meelde. Kui ühtki neist pole, avaneb tavabrauseris.
 
 Proovi demoga: `louend examples/demo`.
 
