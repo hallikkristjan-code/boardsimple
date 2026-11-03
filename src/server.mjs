@@ -11,6 +11,16 @@ const PORT_TRIES = 11; // 4477..4487
 const MAX_BODY = 1024 * 1024;
 const DEBOUNCE_MS = 100;
 const PING_MS = 25_000;
+// Screens share the canvas origin (needed for the element hit-test); block remote
+// code so a CDN script in a screen cannot drive the annotations API.
+// Remote fonts, styles and images stay allowed (common in mockups); scripts do not.
+const SCREEN_CSP = [
+  "default-src 'self' 'unsafe-inline' data: blob:",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https:",
+  "font-src 'self' data: https:",
+  "img-src 'self' data: blob: https:",
+].join("; ");
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 
 const TYPES = {
@@ -48,13 +58,14 @@ function safeResolve(base, rawRest) {
   return target.startsWith(base + sep) ? target : null;
 }
 
-async function sendFile(res, path) {
+async function sendFile(res, path, extraHeaders = {}) {
   try {
     if (!(await stat(path)).isFile()) throw new HttpError(404, "not found");
     const body = await readFile(path);
     res.writeHead(200, {
       "content-type": TYPES[extname(path).toLowerCase()] ?? "application/octet-stream",
       "cache-control": "no-store",
+      ...extraHeaders,
     });
     res.end(body);
   } catch (e) {
@@ -115,28 +126,28 @@ function debounced(fn) {
   };
 }
 
-/** Watch <root>/screens recursively; if missing, wait for it to appear. */
-function watchScreens(root, onChange) {
-  const dir = join(root, "screens");
-  let w = null;
-  let rootWatcher = null;
-  const start = () => {
+/**
+ * Watch <root>/<name>. A persistent non-recursive watcher on root re-creates the
+ * inner watcher whenever <name> is created, deleted or replaced (Windows emits no
+ * error when a watched folder is removed).
+ */
+function watchDir(root, name, { recursive }, onChange) {
+  const dir = join(root, name);
+  let inner = null;
+  const arm = () => {
+    inner?.close();
+    inner = null;
     try {
-      w = watch(dir, { recursive: true }, onChange);
-      w.on("error", () => { w?.close(); w = null; waitForDir(); });
-      rootWatcher?.close();
-      rootWatcher = null;
-      onChange();
-    } catch {
-      waitForDir();
-    }
+      inner = watch(dir, { recursive }, onChange);
+      inner.on("error", () => { inner?.close(); inner = null; });
+    } catch { /* folder missing; the root watcher re-arms when it appears */ }
   };
-  const waitForDir = () => {
-    if (rootWatcher) return;
-    rootWatcher = watch(root, (_ev, name) => { if (name === "screens") start(); });
-  };
-  start();
-  return () => { w?.close(); rootWatcher?.close(); };
+  const rootWatcher = watch(root, (_ev, changed) => {
+    if (changed === name) { arm(); onChange(); }
+  });
+  rootWatcher.on("error", () => {});
+  arm();
+  return () => { inner?.close(); rootWatcher.close(); };
 }
 
 function listen(server, port) {
@@ -182,7 +193,7 @@ export async function startServer({ root, port, appDir = APP_DIR }) {
     if (req.method === "GET" && rawPath.startsWith("/screens/")) {
       const p = safeResolve(screensDir, rawPath.slice(9));
       if (!p) throw new HttpError(404, "not found");
-      return sendFile(res, p);
+      return sendFile(res, p, { "content-security-policy": SCREEN_CSP });
     }
     if (req.method === "GET" && rawPath === "/api/screens") {
       return sendJson(res, 200, { root, screens: await scanScreens(root) });
@@ -244,8 +255,8 @@ export async function startServer({ root, port, appDir = APP_DIR }) {
     }
   }
 
-  const stopScreens = watchScreens(root, debounced(() => broadcast("screens")));
-  const annWatcher = watch(canvasDir, debounced(() => broadcast("annotations")));
+  const stopScreens = watchDir(root, "screens", { recursive: true }, debounced(() => broadcast("screens")));
+  const stopCanvas = watchDir(root, ".canvas", { recursive: false }, debounced(() => broadcast("annotations")));
   const ping = setInterval(() => { for (const c of clients) c.write(": ping\n\n"); }, PING_MS);
 
   return {
@@ -254,7 +265,7 @@ export async function startServer({ root, port, appDir = APP_DIR }) {
     async close() {
       clearInterval(ping);
       stopScreens();
-      annWatcher.close();
+      stopCanvas();
       for (const c of clients) c.end();
       clients.clear();
       server.closeAllConnections();

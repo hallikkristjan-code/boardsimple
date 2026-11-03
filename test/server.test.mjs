@@ -1,6 +1,6 @@
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import net from "node:net";
@@ -144,6 +144,27 @@ test("SSE emits annotations event on file change", async () => {
     await writeFile(join(root, ".canvas", "annotations.json"), JSON.stringify({ version: 1, notes: [] }));
   });
   assert.ok(ok);
+});
+
+test("SSE survives screens folder delete and recreate", async () => {
+  await rm(join(root, "screens"), { recursive: true, force: true });
+  await new Promise((r) => setTimeout(r, 300));
+  const ok = await waitForEvent("screens", async () => {
+    await mkdir(join(root, "screens"), { recursive: true });
+    await new Promise((r) => setTimeout(r, 300));
+    await writeFile(join(root, "screens", "taas.html"), "<p>taas</p>");
+  });
+  assert.ok(ok);
+});
+
+test("screen responses carry a CSP that blocks remote scripts", async () => {
+  await mkdir(join(root, "screens"), { recursive: true });
+  await writeFile(join(root, "screens", "csp.html"), "<p>csp</p>");
+  const r = await fetch(u("/screens/csp.html"));
+  assert.equal(r.status, 200);
+  const csp = r.headers.get("content-security-policy") ?? "";
+  assert.match(csp, /script-src 'self' 'unsafe-inline'(;|$)/);
+  assert.match(csp, /font-src [^;]*https:/);
 });
 
 test("busy port falls through to next", async () => {
