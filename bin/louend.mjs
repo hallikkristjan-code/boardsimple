@@ -4,12 +4,15 @@ import { resolve } from "node:path";
 import { stat } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { startServer } from "../src/server.mjs";
+import { openCommand } from "../src/browser.mjs";
 
 const USAGE = `Kasutus: louend [kaust] [--port N] [--no-open]
 
+Avab lõuendi eraldi aknas (Chrome/Edge/Chromium --app); kui ühtki pole, tavabrauseris.
+
   kaust      projekti kaust, kus on screens/ (vaikimisi praegune kaust)
   --port N   port (vaikimisi 4477; kui hõivatud, proovib järgmisi)
-  --no-open  ära ava brauserit`;
+  --no-open  ära ava akent`;
 
 let args;
 try {
@@ -57,10 +60,7 @@ console.log(`Louend: ${server.url}  (kaust: ${root})`);
 console.log("Peatamiseks vajuta Ctrl+C.");
 
 if (!args.values["no-open"]) {
-  const [cmd, cmdArgs] =
-    process.platform === "win32" ? ["cmd", ["/c", "start", "", server.url]]
-    : process.platform === "darwin" ? ["open", [server.url]]
-    : ["xdg-open", [server.url]];
+  const [cmd, cmdArgs] = openCommand(server.url);
   spawn(cmd, cmdArgs, { stdio: "ignore", detached: true }).on("error", () => {
     console.log("Ava brauseris käsitsi:", server.url);
   }).unref();

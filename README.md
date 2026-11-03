@@ -23,6 +23,10 @@ louend C:\Arendus\mingi-projekt
 louend --port 5000 --no-open
 ```
 
+Lõuend avaneb eraldi aknas (Chrome, Edge, Chromium või Brave `--app`-režiimis): oma taskbar-kirje,
+Alt+Tab-is nähtav, tabide vahele ei kao. Aknal on oma profiil (`~/.louend/chrome-profile`), nii et suurus ja
+asukoht jäävad meelde. Kui ühtki neist pole, avaneb tavabrauseris.
+
 Proovi demoga: `louend examples/demo`.
 
 - **Ekraanid:** `screens/<rühm>/<nimi>.html`, suurus `<meta name="artboard" content="width=390,height=844">`.
