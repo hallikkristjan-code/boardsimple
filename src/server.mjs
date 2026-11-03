@@ -245,13 +245,19 @@ export async function startServer({ root, port, appDir = APP_DIR }) {
   });
 
   const first = port ?? DEFAULT_PORT;
-  const tries = first === 0 ? 1 : PORT_TRIES;
-  for (let i = 0; i < tries; i++) {
+  const last = first === 0 ? 0 : Math.min(65535, first + PORT_TRIES - 1);
+  for (let p = first; ; p++) {
     try {
-      actualPort = await listen(server, first + i);
+      actualPort = await listen(server, p);
       break;
     } catch (e) {
-      if (e.code !== "EADDRINUSE" || i === tries - 1) throw e;
+      // EACCES: Windows reserves port ranges (Hyper-V/WSL/Docker) — treat like busy.
+      if (!["EADDRINUSE", "EACCES"].includes(e.code)) throw e;
+      if (p >= last) {
+        const err = new Error(`Vaba porti ei leitud vahemikus ${first}–${last}. Proovi: louend --port 5000`);
+        err.code = "ELOUEND_PORT";
+        throw err;
+      }
     }
   }
 

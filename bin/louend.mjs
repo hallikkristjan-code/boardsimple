@@ -45,7 +45,14 @@ if (port !== undefined && !(Number.isInteger(port) && port >= 0 && port < 65536)
   process.exit(1);
 }
 
-const server = await startServer({ root, port });
+let server;
+try {
+  server = await startServer({ root, port });
+} catch (e) {
+  if (e.code !== "ELOUEND_PORT") throw e;
+  console.error(e.message);
+  process.exit(1);
+}
 console.log(`Louend: ${server.url}  (kaust: ${root})`);
 console.log("Peatamiseks vajuta Ctrl+C.");
 

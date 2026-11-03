@@ -37,3 +37,23 @@ test("louend exits 1 for a missing folder", async () => {
   assert.equal(code, 1);
   assert.match(err, /Kausta ei leitud/);
 });
+
+test("louend prints a friendly error when no port is free", async (t) => {
+  const net = await import("node:net");
+  const blocker = net.createServer();
+  const ok = await new Promise((r) => {
+    blocker.once("error", () => r(false));
+    blocker.listen(65535, "127.0.0.1", () => r(true));
+  });
+  if (!ok) return t.skip("port 65535 in use by a parallel test");
+  let err = "";
+  const code = await new Promise((resolve) => {
+    const child = spawn(process.execPath, [bin, join(repo, "examples", "demo"), "--no-open", "--port", "65535"]);
+    child.stderr.on("data", (d) => { err += d; });
+    child.on("exit", resolve);
+  });
+  blocker.close();
+  assert.equal(code, 1);
+  assert.match(err, /Vaba porti ei leitud/);
+  assert.doesNotMatch(err, /at .*server\.mjs/);
+});

@@ -179,3 +179,21 @@ test("busy port falls through to next", async () => {
     blocker.close();
   }
 });
+
+test("busy last port gives a friendly error instead of a bad-port crash", async (t) => {
+  const blocker = net.createServer();
+  const ok = await new Promise((r) => {
+    blocker.once("error", () => r(false));
+    blocker.listen(65535, "127.0.0.1", () => r(true));
+  });
+  if (!ok) return t.skip("port 65535 not available for the test");
+  try {
+    await assert.rejects(startServer({ root, port: 65535 }), (e) => {
+      assert.equal(e.code, "ELOUEND_PORT");
+      assert.match(e.message, /Vaba porti ei leitud/);
+      return true;
+    });
+  } finally {
+    blocker.close();
+  }
+});
