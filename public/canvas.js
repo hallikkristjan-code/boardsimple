@@ -143,9 +143,10 @@ function syncBoards(next) {
     const rec = boardEls.get(s.file) ?? createBoard(s);
     rec.label.textContent = s.title;
     rec.iframe.title = s.title;
-    if (rec.hash !== s.hash) {
-      rec.hash = s.hash;
-      rec.iframe.src = `/screens/${encodePath(s.file)}?v=${s.hash.slice(0, 12)}`;
+    const version = `${s.hash.slice(0, 12)}${(s.assetsHash ?? "").slice(0, 12)}`;
+    if (rec.hash !== version) {
+      rec.hash = version;
+      rec.iframe.src = `/screens/${encodePath(s.file)}?v=${version}`;
     }
   }
   screens = next;

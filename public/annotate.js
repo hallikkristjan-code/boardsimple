@@ -16,6 +16,8 @@ let notes = [];
 let hoverId = null;
 let draft = null; // {file, board, start, box, el}
 let notebox = null;
+let editing = null; // {id, value} - unsaved inline edit, survives panel rebuilds from live updates
+let saving = false;
 
 // --- data -----------------------------------------------------------------
 async function api(path, opts = {}) {
@@ -143,21 +145,44 @@ function button(label, onClick) {
   return b;
 }
 
-function editInline(row, n) {
+const safely = (fn) => async () => {
+  try {
+    await fn();
+  } catch (e) {
+    alert(`Toiming ebaõnnestus: ${e.message}`);
+  }
+};
+
+function editInline(row, n, caret = null) {
+  if (editing?.id !== n.id) editing = { id: n.id, value: n.text };
   const txt = row.querySelector(".txt");
   const ta = document.createElement("textarea");
-  ta.value = n.text;
+  ta.value = editing.value;
   ta.rows = 3;
   ta.style.width = "100%";
   txt.replaceWith(ta);
-  ta.focus();
+  if (caret === null) ta.focus();
+  else if (caret >= 0) {
+    ta.focus();
+    ta.setSelectionRange(caret, caret);
+  }
   ta.addEventListener("click", (e) => e.stopPropagation());
+  ta.addEventListener("input", () => { editing.value = ta.value; });
   ta.addEventListener("keydown", async (e) => {
-    if (e.key === "Escape") render();
+    if (e.key === "Escape") {
+      editing = null;
+      render();
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      await api(`/api/annotations/${n.id}`, { method: "PATCH", body: JSON.stringify({ text: ta.value.trim() }) });
-      await refresh();
+      try {
+        await api(`/api/annotations/${n.id}`, { method: "PATCH", body: JSON.stringify({ text: ta.value.trim() }) });
+      } catch (err) {
+        alert(`Märkuse muutmine ebaõnnestus: ${err.message}`);
+        return; // keep the textarea and its text
+      }
+      editing = null;
+      await refresh().catch(console.error);
     }
   });
 }
@@ -201,14 +226,14 @@ function renderPanel() {
     actions.className = "actions";
     actions.append(
       button("muuda tekst", () => editInline(row, n)),
-      button(done ? "ava uuesti" : "märgi tehtuks", async () => {
+      button(done ? "ava uuesti" : "märgi tehtuks", safely(async () => {
         await api(`/api/annotations/${n.id}`, { method: "PATCH", body: JSON.stringify({ status: done ? "open" : "done" }) });
         await refresh();
-      }),
-      button("kustuta", async () => {
+      })),
+      button("kustuta", safely(async () => {
         await api(`/api/annotations/${n.id}`, { method: "DELETE" });
         await refresh();
-      }),
+      })),
     );
     body.append(actions);
     row.append(num, body);
@@ -233,7 +258,16 @@ function renderPanel() {
     setTimeout(() => { copy.textContent = "Kopeeri käsk agendile"; }, 1500);
   });
   footer.append(status, copy);
+  const active = document.activeElement;
+  const caret = active?.tagName === "TEXTAREA" && panel.contains(active) ? active.selectionStart : -1;
   panel.replaceChildren(h, list, footer);
+  if (editing) {
+    // Live updates rebuild the panel; reopen the edit with the unsaved text.
+    const row = list.querySelector(`.note-row[data-note="${CSS.escape(editing.id)}"]`);
+    const n = notes.find((x) => x.id === editing.id);
+    if (row && n) editInline(row, n, caret);
+    else editing = null; // note was deleted meanwhile
+  }
 }
 
 // --- ring drawing -----------------------------------------------------------
@@ -332,6 +366,7 @@ function cancelDraft() {
 
 async function saveDraft(text) {
   const d = draft;
+  if (saving || !d?.box) return;
   const box = { x: Math.round(d.box.x), y: Math.round(d.box.y), w: Math.round(d.box.w), h: Math.round(d.box.h) };
   const note = {
     file: d.file,
@@ -340,14 +375,22 @@ async function saveDraft(text) {
     text: text.trim(),
     elements: captureElements(d.board.el, box),
   };
-  closeNotebox();
-  draft = null;
+  saving = true;
   try {
     await api("/api/annotations", { method: "POST", body: JSON.stringify(note) });
   } catch (e) {
+    // Keep the ring and the typed text so the user can retry (Enter / Salvesta).
     alert(`Märkuse salvestamine ebaõnnestus: ${e.message}`);
+    notebox?.querySelector("textarea")?.focus();
+    return;
+  } finally {
+    saving = false;
   }
-  await refresh();
+  if (draft === d) {
+    closeNotebox();
+    draft = null;
+  }
+  await refresh().catch(console.error);
 }
 
 // --- wiring -------------------------------------------------------------------
