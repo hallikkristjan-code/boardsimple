@@ -1,0 +1,86 @@
+:root {
+  --bg: #ececec;
+  --chrome: #fff;
+  --line: #dedede;
+  --text: #1b1b1b;
+  --muted: #6b6b6b;
+  --accent: #2563eb;
+  --ring: #ff3b30;
+  --done: #9a9a9a;
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  display: grid;
+  grid-template: "top top top" 44px "tools view panel" 1fr / 48px 1fr 260px;
+  background: var(--bg);
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+.muted { color: var(--muted); }
+.grow { flex: 1; }
+.pill { padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 52px; text-align: center; }
+
+#top { grid-area: top; display: flex; align-items: center; gap: 12px; padding: 0 14px; background: var(--chrome); border-bottom: 1px solid var(--line); }
+#top button { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; }
+#top button:hover { background: #f4f4f4; }
+
+#tools { grid-area: tools; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 10px; background: var(--chrome); border-right: 1px solid var(--line); }
+#tools button { width: 34px; height: 34px; border: 0; border-radius: 8px; background: none; display: grid; place-items: center; color: var(--muted); }
+#tools button:hover { background: #f1f1f1; color: var(--text); }
+#tools button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+#tools svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+
+#viewport { grid-area: view; position: relative; overflow: hidden; touch-action: none;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, #d2d2d2 1px, transparent 1px);
+  background-size: 24px 24px; }
+.tool-kasi #viewport, .panning #viewport { cursor: grab; }
+.panning.dragging #viewport { cursor: grabbing; }
+.tool-ring #viewport { cursor: crosshair; }
+#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+#overlay { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+#empty { position: absolute; inset: 0; margin: auto; height: fit-content; max-width: 420px; text-align: center; color: var(--muted); }
+
+.group-label { position: absolute; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.board { position: absolute; }
+.board-label { position: absolute; bottom: 100%; left: 0; padding-bottom: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; transform-origin: 0 100%; }
+.board iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.04); pointer-events: none; }
+.tool-vali:not(.panning) .board iframe { pointer-events: auto; }
+
+/* annotations */
+.ann-ring { fill: rgba(255, 59, 48, .06); stroke: var(--ring); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.ann-ring.done { stroke: var(--done); fill: none; stroke-dasharray: 5 4; }
+.ann-ring.hover { stroke-width: 4; }
+.ann-pin { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--ring); color: #fff; font: 700 11px/22px system-ui; text-align: center; transform-origin: 50% 50%; pointer-events: auto; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.ann-pin.done { background: var(--done); }
+#pins { position: absolute; left: 0; top: 0; }
+#notebox { position: absolute; z-index: 5; width: 240px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.16); }
+#notebox textarea { width: 100%; min-height: 64px; resize: vertical; border: 1px solid var(--accent); border-radius: 6px; padding: 6px 8px; font: inherit; }
+#notebox .row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+#notebox .hint { color: var(--muted); font-size: 11px; }
+#notebox button { border: 0; border-radius: 6px; padding: 5px 10px; background: var(--accent); color: #fff; font-weight: 600; }
+
+#panel { grid-area: panel; display: flex; flex-direction: column; background: var(--chrome); border-left: 1px solid var(--line); min-height: 0; }
+#panel h2 { margin: 0; padding: 14px 14px 8px; font-size: 13px; }
+#panel .list { flex: 1; overflow: auto; padding: 0 10px; display: flex; flex-direction: column; gap: 6px; }
+#panel .empty { color: var(--muted); padding: 4px 4px 0; }
+.note-row { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.note-row:hover, .note-row.hover { border-color: var(--ring); }
+.note-row.done { opacity: .6; }
+.note-row .num { width: 22px; height: 22px; border-radius: 50%; background: var(--ring); color: #fff; font: 700 11px/22px system-ui; text-align: center; }
+.note-row.done .num { background: var(--done); }
+.note-row .txt { white-space: pre-wrap; word-break: break-word; }
+.note-row .meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+.note-row .badge { display: inline-block; margin-top: 4px; padding: 1px 6px; border-radius: 4px; background: #fff3cd; color: #7a5800; font-size: 11px; }
+.note-row .actions { grid-column: 2; display: flex; gap: 10px; margin-top: 4px; }
+.note-row .actions button { background: none; border: 0; padding: 0; color: var(--muted); font-size: 11px; text-decoration: underline; }
+.note-row .actions button:hover { color: var(--text); }
+#panel footer { padding: 10px 12px 12px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+#panel footer .status { color: var(--muted); font-size: 11px; }
+#panel footer button { border: 0; border-radius: 8px; padding: 9px; background: var(--accent); color: #fff; font-weight: 600; }
+
+@media (prefers-reduced-motion: no-preference) {
+  #tools button, .note-row { transition: background-color .12s, border-color .12s; }
+}
