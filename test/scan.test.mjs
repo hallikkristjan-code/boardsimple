@@ -52,3 +52,18 @@ test("scanScreens without screens folder returns []", async () => {
   const root = await makeRoot({});
   assert.deepEqual(await scanScreens(root), []);
 });
+
+test("scanScreens assetsHash tracks local assets next to the screen, not the HTML hash", async () => {
+  const root = await makeRoot({
+    "screens/a/one.html": "<p>1</p>",
+    "screens/a/img/logo.png": "v1",
+    "screens/b/two.html": "<p>2</p>",
+  });
+  const before = await scanScreens(root);
+  await writeFile(join(root, "screens/a/img/logo.png"), "v2-longer");
+  const after = await scanScreens(root);
+  const pick = (list, name) => list.find((x) => x.name === name);
+  assert.equal(pick(after, "one").hash, pick(before, "one").hash);
+  assert.notEqual(pick(after, "one").assetsHash, pick(before, "one").assetsHash);
+  assert.equal(pick(after, "two").assetsHash, pick(before, "two").assetsHash);
+});

@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join, relative, sep, basename, dirname } from "node:path";
 
@@ -29,6 +29,12 @@ function compareGroups(a, b) {
   return a.localeCompare(b, "et");
 }
 
+function assetsHashFor(assets, groupDir) {
+  const prefix = groupDir === "." ? "" : `${groupDir.split(sep).join("/")}/`;
+  const mine = assets.filter((a) => a.startsWith(prefix));
+  return createHash("sha256").update(mine.join("\n")).digest("hex");
+}
+
 export async function scanScreens(root) {
   const dir = join(root, "screens");
   let entries;
@@ -38,6 +44,16 @@ export async function scanScreens(root) {
     if (e.code === "ENOENT") return [];
     throw e;
   }
+  // Local assets (images, fonts, ...) as "dir/name:size:mtime" so the canvas can
+  // reload a screen when something next to it changes, without hashing big files.
+  const assets = [];
+  for (const ent of entries) {
+    if (!ent.isFile() || ent.name.toLowerCase().endsWith(".html")) continue;
+    const abs = join(ent.parentPath, ent.name);
+    const st = await stat(abs).catch(() => null);
+    if (st) assets.push(`${relative(dir, abs).split(sep).join("/")}:${st.size}:${st.mtimeMs}`);
+  }
+  assets.sort();
   const screens = [];
   for (const ent of entries) {
     if (!ent.isFile() || !ent.name.toLowerCase().endsWith(".html")) continue;
@@ -55,6 +71,7 @@ export async function scanScreens(root) {
       width: meta.width ?? DEFAULT_W,
       height: meta.height ?? DEFAULT_H,
       hash: createHash("sha256").update(buf).digest("hex"),
+      assetsHash: assetsHashFor(assets, groupDir),
     });
   }
   return screens.sort((a, b) => compareGroups(a.group, b.group) || a.file.localeCompare(b.file, "et"));
