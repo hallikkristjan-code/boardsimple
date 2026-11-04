@@ -41,5 +41,8 @@ Server kuulab ainult `127.0.0.1` ja keeldub võõra `Origin`/`Host` päisega pä
 ## Arendus
 
 ```sh
-npm test
+npm test                      # node-testid
+python -I test/e2e/e2e.py     # brauseri e2e (pip install playwright && playwright install chromium)
 ```
+
+CI jooksutab mõlemad (node-testid Ubuntul ja Windowsil, e2e Ubuntul).
