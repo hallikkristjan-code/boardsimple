@@ -23,6 +23,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pill { padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 52px; text-align: center; }
 
 #top { grid-area: top; display: flex; align-items: center; gap: 12px; padding: 0 14px; background: var(--chrome); border-bottom: 1px solid var(--line); }
+#conn { color: #b42318; font-weight: 600; }
 #top button { background: none; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; }
 #top button:hover { background: #f4f4f4; }
 
