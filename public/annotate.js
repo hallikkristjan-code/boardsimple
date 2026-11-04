@@ -1,7 +1,7 @@
 import { ellipseSamples, screenToWorld, worldToScreen } from "./geometry.js";
 import {
   getView, getTool, getScreens, getRoot, getBoard, boardAt, centerOn, isPanGesture,
-  onViewChange, onScreensChange, onLayoutChange, viewportEl, worldEl, overlayEl, events,
+  onViewChange, onScreensChange, onLayoutChange, onReconnect, viewportEl, worldEl, overlayEl, events,
 } from "./canvas.js";
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -250,7 +250,7 @@ function renderPanel() {
     const sepChar = getRoot().includes("\\") ? "\\" : "/";
     const path = `${getRoot()}${sepChar}.canvas${sepChar}annotations.json`;
     try {
-      await navigator.clipboard.writeText(`vaata märkused üle: ${path}`);
+      await navigator.clipboard.writeText(`vaata märkused üle: ${path} (louend: ${location.origin})`);
       copy.textContent = "Kopeeritud";
     } catch {
       copy.textContent = "Kopeerimine ei õnnestunud";
@@ -398,4 +398,5 @@ onViewChange(positionNotebox);
 onLayoutChange(render);
 onScreensChange(render);
 events.addEventListener("annotations", () => refresh().catch(console.error));
+onReconnect(() => refresh().catch(console.error));
 refresh().catch(console.error);

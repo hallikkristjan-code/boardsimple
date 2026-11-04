@@ -27,22 +27,25 @@ shutil.copytree(repo / "examples/demo/screens", work / "screens")
 asset = work / "screens/suunad/pilt.svg"
 asset.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')
 
-srv = subprocess.Popen(
-    ["node", str(repo / "bin/louend.mjs"), str(work), "--port", "0", "--no-open"],
-    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
-)
-url = None
-deadline = time.time() + 10
-while time.time() < deadline and url is None:
-    line = srv.stdout.readline()
-    if not line and srv.poll() is not None:
-        break
-    m = re.search(r"Louend: (http://127\.0\.0\.1:\d+)", line)
-    if m:
-        url = m.group(1) + "/"
-if url is None:
-    srv.terminate()
+
+def start_server(port):
+    proc = subprocess.Popen(
+        ["node", str(repo / "bin/louend.mjs"), str(work), "--port", str(port), "--no-open"],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+    )
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        line = proc.stdout.readline()
+        if not line and proc.poll() is not None:
+            break
+        m = re.search(r"Louend: (http://127\.0\.0\.1:\d+)", line)
+        if m:
+            return proc, m.group(1) + "/"
+    proc.terminate()
     sys.exit("louend did not print its URL")
+
+
+srv, url = start_server(0)
 
 ok = True
 
@@ -186,6 +189,43 @@ try:
         pg.wait_for_timeout(100)
         shown_label = pg.evaluate(label_state)
         check("hover shows the label untruncated", shown_label["width"] > 0 and not shown_label["cut"])
+
+        # 7. The copied command carries the server's real address (the port can vary).
+        pg.evaluate("""() => Object.defineProperty(navigator, "clipboard", {
+          value: { writeText: (t) => { window.copied = t; return Promise.resolve(); } },
+        })""")
+        pg.get_by_text("Kopeeri käsk agendile").click()
+        pg.wait_for_function("window.copied !== undefined")
+        copied = pg.evaluate("window.copied")
+        check("copied command has the annotations path", "annotations.json" in copied)
+        check(f"copied command has the server URL: {copied}", url.rstrip("/") in copied)
+
+        # 8. A lost connection is visible; reconnecting catches up on what was missed.
+        conn = pg.locator("#conn")
+        check("no connection warning while connected", not conn.is_visible())
+        srv.terminate()
+        srv.wait()
+        pg.wait_for_selector("#conn:visible", timeout=5000)
+        check("connection warning shown when server stops", "katkes" in conn.inner_text())
+        (work / "screens/suunad/uus.html").write_text("<title>Uus</title><p>uus</p>", encoding="utf8")
+        store = work / ".canvas/annotations.json"
+        missed = json.loads(store.read_text(encoding="utf8"))
+        next(n for n in missed["notes"] if n["id"] == first_id)["text"] = "muudetud katkestuse ajal"
+        store.write_text(json.dumps(missed), encoding="utf8")
+        srv, _ = start_server(int(url.rstrip("/").rsplit(":", 1)[1]))
+        pg.wait_for_selector("#conn", state="hidden", timeout=15000)
+        pg.wait_for_timeout(500)
+        check("warning clears after reconnect", not conn.is_visible())
+        check("missed screen appears after reconnect", pg.locator('.board-label', has_text="Uus").count() == 1)
+        check("missed note edit appears after reconnect",
+              "muudetud katkestuse ajal" in pg.locator(f'.note-row[data-note="{first_id}"] .txt').inner_text())
+
+        # 9. EventSource gives up for good on a bad response; do not promise a retry then.
+        pg2 = b.new_page()
+        pg2.route("**/api/events", lambda r: r.fulfill(status=503, body="x"))
+        pg2.goto(url)
+        pg2.wait_for_selector("#conn:visible", timeout=5000)
+        check("permanent failure asks for a page refresh", "värskenda" in pg2.locator("#conn").inner_text())
         b.close()
 finally:
     srv.terminate()

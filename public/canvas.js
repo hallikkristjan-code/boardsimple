@@ -7,6 +7,7 @@ const boardsEl = document.getElementById("boards");
 const overlayEl = document.getElementById("overlay");
 const zoomEl = document.getElementById("zoom");
 const emptyEl = document.getElementById("empty");
+const connEl = document.getElementById("conn");
 
 let view = { tx: 0, ty: 0, scale: 1 };
 let tool = "kasi";
@@ -19,6 +20,7 @@ const groupEls = [];
 const viewListeners = new Set();
 const screensListeners = new Set();
 const layoutListeners = new Set();
+const reconnectListeners = new Set();
 let fittedOnce = false;
 
 export const getView = () => view;
@@ -29,6 +31,7 @@ export { viewportEl, worldEl, overlayEl };
 export const onViewChange = (cb) => viewListeners.add(cb);
 export const onScreensChange = (cb) => screensListeners.add(cb);
 export const onLayoutChange = (cb) => layoutListeners.add(cb);
+export const onReconnect = (cb) => reconnectListeners.add(cb);
 
 export function getBoard(file) {
   const b = layout.boards.find((x) => x.file === file);
@@ -233,6 +236,19 @@ window.addEventListener("resize", () => setView(view));
 // --- live updates -------------------------------------------------------
 const events = new EventSource("/api/events");
 events.addEventListener("screens", () => loadScreens().catch(console.error));
+events.addEventListener("error", () => {
+  // The browser retries network errors by itself, but gives up for good on a bad response.
+  connEl.textContent = events.readyState === EventSource.CLOSED
+    ? "Ühendus katkes. Käivita louend ja värskenda lehte."
+    : "Ühendus katkes, vaade võib olla vana. Proovin uuesti…";
+  connEl.hidden = false;
+});
+events.addEventListener("open", () => {
+  if (connEl.hidden) return;
+  connEl.hidden = true;
+  loadScreens().catch(console.error); // events sent during the outage are gone
+  for (const cb of reconnectListeners) cb();
+});
 export { events };
 
 setTool("kasi");
