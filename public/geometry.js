@@ -4,8 +4,20 @@ export const MIN_SCALE = 0.05;
 export const MAX_SCALE = 4;
 
 /** One row per group (in input order), boards left to right. */
+const ROW_GAP = 120;
+const LABEL_H = 28;
+const ALL_LABELS_PX = 50; // group label + board label stacked above a board, in screen px
+const BOARD_LABEL_PX = 26;
+
+// Labels keep their screen size while the gap between rows shrinks with zoom.
+export function labelMode(scale, gap = ROW_GAP + LABEL_H) {
+  const room = gap * scale;
+  if (room >= ALL_LABELS_PX) return "all";
+  return room >= BOARD_LABEL_PX ? "boards" : "none";
+}
+
 export function layoutBoards(screens, opts = {}) {
-  const { gap = 48, rowGap = 120, labelH = 28, x0 = 0, y0 = 0 } = opts;
+  const { gap = 48, rowGap = ROW_GAP, labelH = LABEL_H, x0 = 0, y0 = 0 } = opts;
   const boards = [];
   const groups = [];
   let y = y0;
