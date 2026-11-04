@@ -40,7 +40,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tool-kasi #viewport, .panning #viewport { cursor: grab; }
 .panning.dragging #viewport { cursor: grabbing; }
 .tool-ring #viewport { cursor: crosshair; }
-#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 #overlay { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 #empty { position: absolute; inset: 0; margin: auto; height: fit-content; max-width: 420px; text-align: center; color: var(--muted); }
 
