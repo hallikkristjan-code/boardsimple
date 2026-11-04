@@ -351,6 +351,8 @@ function openNotebox() {
   viewportEl.append(notebox);
   positionNotebox();
   ta.focus();
+  // Read now: the page may be unloaded if the user pans away before saving.
+  draft.elements = captureElements(draft.board.el, roundBox(draft.box));
 }
 
 function closeNotebox() {
@@ -364,16 +366,17 @@ function cancelDraft() {
   render();
 }
 
+const roundBox = (b) => ({ x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.w), h: Math.round(b.h) });
+
 async function saveDraft(text) {
   const d = draft;
   if (saving || !d?.box) return;
-  const box = { x: Math.round(d.box.x), y: Math.round(d.box.y), w: Math.round(d.box.w), h: Math.round(d.box.h) };
   const note = {
     file: d.file,
     fileHash: screenOf(d.file)?.hash ?? null,
-    box,
+    box: roundBox(d.box),
     text: text.trim(),
-    elements: captureElements(d.board.el, box),
+    elements: d.elements,
   };
   saving = true;
   try {

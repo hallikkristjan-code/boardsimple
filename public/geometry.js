@@ -69,6 +69,15 @@ export function fitAll(boards, viewport, pad = 40) {
   };
 }
 
+/** Files of boards within `margin` screen px of the viewport. */
+export function nearbyBoards(boards, view, viewport, margin) {
+  const a = screenToWorld({ x: -margin, y: -margin }, view);
+  const b = screenToWorld({ x: viewport.w + margin, y: viewport.h + margin }, view);
+  return new Set(boards
+    .filter((c) => c.x < b.x && c.x + c.w > a.x && c.y < b.y && c.y + c.h > a.y)
+    .map((c) => c.file));
+}
+
 /** Grid points inside the ellipse inscribed in box; always includes the center. */
 export function ellipseSamples(box, step = 8) {
   const cx = box.x + box.w / 2;
