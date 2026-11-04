@@ -1,4 +1,4 @@
-import { layoutBoards, zoomAt, fitAll, screenToWorld } from "./geometry.js";
+import { layoutBoards, zoomAt, fitAll, screenToWorld, labelMode } from "./geometry.js";
 
 const AUTO_FALLBACK_H = 900;
 const viewportEl = document.getElementById("viewport");
@@ -56,6 +56,7 @@ export function setView(v) {
   view = v;
   worldEl.style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
   worldEl.style.setProperty("--inv", String(1 / view.scale));
+  worldEl.dataset.labels = labelMode(view.scale);
   zoomEl.textContent = `${Math.round(view.scale * 100)}%`;
   for (const cb of viewListeners) cb(view);
 }
@@ -142,6 +143,7 @@ function syncBoards(next) {
   for (const s of next) {
     const rec = boardEls.get(s.file) ?? createBoard(s);
     rec.label.textContent = s.title;
+    rec.label.title = s.title;
     rec.iframe.title = s.title;
     const version = `${s.hash.slice(0, 12)}${(s.assetsHash ?? "").slice(0, 12)}`;
     if (rec.hash !== version) {

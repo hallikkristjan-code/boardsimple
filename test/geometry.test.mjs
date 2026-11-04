@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  layoutBoards, screenToWorld, worldToScreen, zoomAt, fitAll, ellipseSamples,
+  layoutBoards, screenToWorld, worldToScreen, zoomAt, fitAll, ellipseSamples, labelMode,
 } from "../public/geometry.js";
 
 const S = (file, group, width, height) => ({ file, group, width, height });
@@ -64,4 +64,12 @@ test("ellipseSamples stays inside the ellipse and includes center", () => {
 
 test("ellipseSamples of zero-size box is just the center", () => {
   assert.deepEqual(ellipseSamples({ x: 5, y: 6, w: 0, h: 0 }), [{ x: 5, y: 6 }]);
+});
+
+test("labelMode drops labels that no longer fit the row gap", () => {
+  assert.equal(labelMode(1), "all");
+  assert.equal(labelMode(0.35), "all");
+  assert.equal(labelMode(0.23), "boards");
+  assert.equal(labelMode(0.18), "boards");
+  assert.equal(labelMode(0.1), "none");
 });

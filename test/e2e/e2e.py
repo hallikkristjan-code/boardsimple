@@ -131,6 +131,61 @@ try:
         changed = [a for a, c in zip(before, after) if a != c]
         check("asset change reloads suunad screens", bool(changed) and all("suunad" in c for c in changed))
         check("other folder not reloaded", all(a == c for a, c in zip(before, after) if "suunad" not in a))
+
+        # 4. "fail muutunud" warns on open notes only; a done note was changed on purpose.
+        changed_note = next(n for n in doc["notes"] if n["id"] == first_id)
+        target = work / changed_note["file"]
+        target.write_text(target.read_text(encoding="utf8") + "<!-- muudetud -->", encoding="utf8")
+        pg.wait_for_timeout(1500)
+        badges = lambda note_id: pg.locator(f'.note-row[data-note="{note_id}"] .badge').count()
+        check("open note shows file-changed badge", badges(first_id) == 1)
+        check("done note has no file-changed badge", badges(second_id) == 0)
+
+        # 5. Labels never collide, at any zoom.
+        pg.click("#fit")
+        pg.wait_for_timeout(200)
+        vp = pg.locator("#viewport").bounding_box()
+        pg.mouse.move(vp["x"] + vp["width"] / 2, vp["y"] + vp["height"] / 2)
+        collisions = []
+        modes = set()
+        for _ in range(12):
+            found = pg.evaluate("""() => {
+              const rect = (e) => e.getBoundingClientRect();
+              const shown = (sel) => [...document.querySelectorAll(sel)].filter((e) => rect(e).width > 0);
+              const hit = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+              const groups = shown(".group-label"), labels = shown(".board:not(:hover) .board-label"), boards = shown(".board iframe");
+              const out = [];
+              for (const g of groups) {
+                for (const b of boards) if (hit(rect(g), rect(b))) out.push(`group over board: ${g.textContent}`);
+                for (const l of labels) if (hit(rect(g), rect(l))) out.push(`group over label: ${g.textContent}`);
+              }
+              labels.forEach((a, i) => labels.slice(i + 1).forEach((b) => {
+                if (hit(rect(a), rect(b))) out.push(`label over label: ${a.textContent} / ${b.textContent}`);
+              }));
+              for (const l of labels) for (const b of boards) if (hit(rect(l), rect(b))) out.push(`label over board: ${l.textContent}`);
+              return { out, mode: document.getElementById("world").dataset.labels ?? "?" };
+            }""")
+            collisions += found["out"]
+            modes.add(found["mode"])
+            pg.mouse.wheel(0, 240)
+            pg.wait_for_timeout(60)
+        check(f"no label collisions while zooming out {sorted(collisions)[:3]}", not collisions)
+        check(f"label modes exercised {sorted(modes)}", modes >= {"boards", "none"})
+
+        # 6. With labels hidden, hovering a board shows its full name.
+        check("zoomed out to no labels", pg.evaluate("document.getElementById('world').dataset.labels") == "none")
+        label_state = """() => {
+          const l = document.querySelector(".board-label");
+          return { width: l.getBoundingClientRect().width, cut: l.scrollWidth > l.clientWidth };
+        }"""
+        pg.mouse.move(5, 5)
+        pg.wait_for_timeout(100)
+        check("label hidden without hover", pg.evaluate(label_state)["width"] == 0)
+        box = pg.locator(".board").first.bounding_box()
+        pg.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+        pg.wait_for_timeout(100)
+        shown_label = pg.evaluate(label_state)
+        check("hover shows the label untruncated", shown_label["width"] > 0 and not shown_label["cut"])
         b.close()
 finally:
     srv.terminate()

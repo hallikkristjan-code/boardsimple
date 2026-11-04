@@ -35,7 +35,7 @@ async function refresh() {
 const screenOf = (file) => getScreens().find((s) => s.file === file);
 const isStale = (n) => {
   const s = screenOf(n.file);
-  return Boolean(s && n.fileHash && s.hash !== n.fileHash);
+  return Boolean(n.status !== "done" && s && n.fileHash && s.hash !== n.fileHash);
 };
 
 // --- element capture --------------------------------------------------------
