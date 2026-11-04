@@ -31,6 +31,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 #tools button { width: 34px; height: 34px; border: 0; border-radius: 8px; background: none; display: grid; place-items: center; color: var(--muted); }
 #tools button:hover { background: #f1f1f1; color: var(--text); }
 #tools button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+#colors { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); }
+#tools #colors button, #tools #colors button:hover, #tools #colors button[aria-pressed="true"] { width: 22px; height: 22px; border-radius: 50%; background: var(--c); }
+#tools #colors button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--chrome), 0 0 0 4px var(--c); }
 #tools svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
 
 #viewport { grid-area: view; position: relative; overflow: hidden; touch-action: none;
@@ -39,7 +42,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background-size: 24px 24px; }
 .tool-kasi #viewport, .panning #viewport { cursor: grab; }
 .panning.dragging #viewport { cursor: grabbing; }
-.tool-ring #viewport { cursor: crosshair; }
+:is(.tool-ring, .tool-kast, .tool-joon, .tool-nool) #viewport { cursor: crosshair; }
 #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 #overlay { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 #empty { position: absolute; inset: 0; margin: auto; height: fit-content; max-width: 420px; text-align: center; color: var(--muted); }
@@ -54,10 +57,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tool-vali:not(.panning) .board iframe { pointer-events: auto; }
 
 /* annotations */
-.ann-ring { fill: rgba(255, 59, 48, .06); stroke: var(--ring); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.ann-ring { fill: color-mix(in srgb, var(--mark, var(--ring)) 8%, transparent); stroke: var(--mark, var(--ring)); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.ann-ring.open { fill: none; }
 .ann-ring.done { stroke: var(--done); fill: none; stroke-dasharray: 5 4; }
 .ann-ring.hover { stroke-width: 4; }
-.ann-pin { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--ring); color: #fff; font: 700 11px/22px system-ui; text-align: center; transform-origin: 50% 50%; pointer-events: auto; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.ann-pin { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--mark, var(--ring)); color: #fff; font: 700 11px/22px system-ui; text-align: center; transform-origin: 50% 50%; pointer-events: auto; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
 .ann-pin.done { background: var(--done); }
 #pins { position: absolute; left: 0; top: 0; }
 #notebox { position: absolute; z-index: 5; width: 240px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.16); }
@@ -73,7 +77,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .note-row { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
 .note-row:hover, .note-row.hover { border-color: var(--ring); }
 .note-row.done { opacity: .6; }
-.note-row .num { width: 22px; height: 22px; border-radius: 50%; background: var(--ring); color: #fff; font: 700 11px/22px system-ui; text-align: center; }
+.note-row .num { width: 22px; height: 22px; border-radius: 50%; background: var(--mark, var(--ring)); color: #fff; font: 700 11px/22px system-ui; text-align: center; }
 .note-row.done .num { background: var(--done); }
 .note-row .txt { white-space: pre-wrap; word-break: break-word; }
 .note-row .meta { color: var(--muted); font-size: 11px; margin-top: 2px; }

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   layoutBoards, screenToWorld, worldToScreen, zoomAt, fitAll, ellipseSamples, labelMode, nearbyBoards, MIN_SCALE,
+  rectSamples, isClosedPath, markSamples, pathBox, pinPoint,
 } from "../public/geometry.js";
 
 const S = (file, group, width, height) => ({ file, group, width, height });
@@ -97,4 +98,57 @@ test("fitAll fits a book-sized project without cutting off rows", () => {
   const v = fitAll(boards, viewport);
   assert.ok(v.ty >= 0, `first row starts at ${v.ty}`);
   assert.ok(v.ty + (17 * 1012 + 864) * v.scale <= viewport.h, "last row fits");
+});
+
+test("rectSamples covers the corners that an ellipse misses", () => {
+  const pts = rectSamples({ x: 0, y: 0, w: 80, h: 40 });
+  assert.ok(pts.some((p) => p.x <= 4 && p.y <= 4));
+  assert.ok(pts.some((p) => p.x >= 76 && p.y >= 36));
+});
+
+test("isClosedPath is true only when a long path ends near its start", () => {
+  const loop = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }, { x: 5, y: 5 }];
+  assert.equal(isClosedPath(loop, 24), true);
+  assert.equal(isClosedPath([{ x: 0, y: 0 }, { x: 100, y: 0 }], 24), false);
+  assert.equal(isClosedPath([{ x: 0, y: 0 }, { x: 10, y: 0 }], 24), false); // short stroke, not a loop
+});
+
+test("markSamples on a closed line stays inside it", () => {
+  const points = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 0, y: 100 }];
+  const pts = markSamples({ shape: "line", closed: true, points, box: pathBox(points) });
+  assert.ok(pts.length > 0);
+  assert.ok(pts.every((p) => p.x + p.y <= 100));
+});
+
+test("markSamples on an underline reaches the text above it", () => {
+  const points = [{ x: 0, y: 100 }, { x: 80, y: 100 }];
+  const pts = markSamples({ shape: "line", closed: false, points, box: pathBox(points) });
+  assert.ok(pts.some((p) => p.x === 40 && p.y === 100), "on the line");
+  assert.ok(pts.some((p) => p.y <= 72), "text above");
+  assert.ok(pts.every((p) => p.y <= 100), "nothing below");
+});
+
+test("markSamples on a vertical line keeps to the line", () => {
+  const points = [{ x: 50, y: 0 }, { x: 50, y: 80 }];
+  const pts = markSamples({ shape: "line", closed: false, points, box: pathBox(points) });
+  assert.ok(pts.every((p) => p.x === 50 && p.y >= 0));
+});
+
+test("markSamples on an arrow looks at the tip, not the tail", () => {
+  const points = [{ x: 0, y: 0 }, { x: 200, y: 100 }];
+  const pts = markSamples({ shape: "arrow", points, box: pathBox(points) });
+  assert.ok(pts.every((p) => Math.abs(p.x - 200) <= 8 && Math.abs(p.y - 100) <= 8));
+});
+
+test("markSamples treats notes without a shape as rings", () => {
+  const box = { x: 0, y: 0, w: 80, h: 40 };
+  assert.deepEqual(markSamples({ box }), ellipseSamples(box));
+});
+
+test("pinPoint keeps the arrow pin off the tip and the line pin at its end", () => {
+  const box = { x: 0, y: 0, w: 100, h: 50 };
+  const points = [{ x: 0, y: 0 }, { x: 100, y: 50 }];
+  assert.deepEqual(pinPoint({ shape: "arrow", box, points }), { x: 0, y: 0 });
+  assert.deepEqual(pinPoint({ shape: "line", box, points }), { x: 100, y: 50 });
+  assert.deepEqual(pinPoint({ shape: "box", box }), { x: 100, y: 0 });
 });

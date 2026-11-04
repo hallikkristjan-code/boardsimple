@@ -69,6 +69,87 @@ export function fitAll(boards, viewport, pad = 40) {
   };
 }
 
+const ABOVE_LINE_PX = 32; // an underline marks the text over it, which it may not touch
+
+const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+export function pathLength(points) {
+  return points.slice(1).reduce((sum, p, i) => sum + distance(points[i], p), 0);
+}
+
+export function pathBox(points) {
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+
+/** A stroke counts as a loop if it ends near its start and is much longer than that gap. */
+export function isClosedPath(points, tolerance) {
+  return distance(points[0], points.at(-1)) <= tolerance && pathLength(points) >= tolerance * 3;
+}
+
+function insidePolygon(p, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i];
+    const b = poly[j];
+    if ((a.y > p.y) !== (b.y > p.y) && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+
+export function rectSamples(box, step = 8) {
+  const pts = [{ x: box.x + box.w / 2, y: box.y + box.h / 2 }];
+  for (let y = box.y; y <= box.y + box.h; y += step) {
+    for (let x = box.x; x <= box.x + box.w; x += step) pts.push({ x, y });
+  }
+  return pts;
+}
+
+function lineSamples(points, step = 8) {
+  const pts = [];
+  points.forEach((a, i) => {
+    const b = points[i + 1] ?? a;
+    const flat = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
+    const n = Math.max(1, Math.floor(distance(a, b) / step));
+    for (let t = 0; t <= n; t++) {
+      const p = { x: a.x + ((b.x - a.x) * t) / n, y: a.y + ((b.y - a.y) * t) / n };
+      pts.push(p);
+      if (flat) for (let up = step; up <= ABOVE_LINE_PX; up += step) pts.push({ x: p.x, y: p.y - up });
+    }
+  });
+  return pts;
+}
+
+/** Points to hit-test for a mark, in the same coordinates as the mark. */
+export function markSamples({ shape = "ring", box, points, closed }) {
+  if (shape === "box") return rectSamples(box);
+  if (shape === "arrow") {
+    const { x, y } = points.at(-1);
+    return [{ x, y }, { x: x - 6, y }, { x: x + 6, y }, { x, y: y - 6 }, { x, y: y + 6 }];
+  }
+  if (shape === "line") {
+    if (!closed) return lineSamples(points);
+    const inside = rectSamples(box).filter((p) => insidePolygon(p, points));
+    return inside.length ? inside : points;
+  }
+  return ellipseSamples(box);
+}
+
+/** Where a mark's number pin sits. */
+export function pinPoint({ shape = "ring", box, points, closed }) {
+  if (shape === "box") return { x: box.x + box.w, y: box.y };
+  if (shape === "arrow") return points[0]; // the tip must stay visible
+  if (shape === "line") {
+    if (!closed) return points.at(-1);
+    return points.reduce((best, p) => (p.x - p.y > best.x - best.y ? p : best));
+  }
+  const a = Math.PI / 4;
+  return { x: box.x + box.w / 2 + (box.w / 2) * Math.cos(a), y: box.y + box.h / 2 - (box.h / 2) * Math.sin(a) };
+}
+
 /** Files of boards within `margin` screen px of the viewport. */
 export function nearbyBoards(boards, view, viewport, margin) {
   const a = screenToWorld({ x: -margin, y: -margin }, view);

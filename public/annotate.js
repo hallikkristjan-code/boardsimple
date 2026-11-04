@@ -1,11 +1,16 @@
-import { ellipseSamples, screenToWorld, worldToScreen } from "./geometry.js";
+import { isClosedPath, markSamples, pathBox, pathLength, pinPoint, screenToWorld, worldToScreen } from "./geometry.js";
 import {
-  getView, getTool, getScreens, getRoot, getBoard, boardAt, centerOn, isPanGesture,
+  getView, getTool, getColor, getScreens, getRoot, getBoard, boardAt, centerOn, isPanGesture, MARK_TOOLS,
   onViewChange, onScreensChange, onLayoutChange, onReconnect, viewportEl, worldEl, overlayEl, events,
 } from "./canvas.js";
 
 const SVG = "http://www.w3.org/2000/svg";
 const MIN_RING_PX = 6;
+const MIN_LINE_PX = 12;
+const CLOSE_LOOP_PX = 24;
+const MIN_STEP_PX = 2;
+const MAX_POINTS = 2000;
+const ARROW_HEAD = 18;
 const MAX_ELEMENTS = 10;
 const panel = document.getElementById("panel");
 const pinsEl = document.createElement("div");
@@ -58,11 +63,14 @@ function selectorFor(el) {
 
 const intersects = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
-function captureElements(iframe, box) {
+function captureElements(iframe, mark) {
   const doc = iframe.contentDocument;
   if (!doc) return [];
   const found = new Set();
-  for (const p of ellipseSamples(box)) {
+  const samples = markSamples(mark);
+  const area = pathBox(samples);
+  const box = { x: area.x - 1, y: area.y - 1, w: area.w + 2, h: area.h + 2 }; // a line's area can be 0 high
+  for (const p of samples) {
     for (const el of doc.elementsFromPoint(p.x, p.y)) {
       const tag = el.tagName.toLowerCase();
       if (tag !== "html" && tag !== "body") found.add(el);
@@ -85,10 +93,17 @@ function captureElements(iframe, box) {
 }
 
 // --- rendering --------------------------------------------------------------
-function ringGeom(n) {
+function toWorld(m, b) {
+  return {
+    ...m,
+    box: { x: b.x + m.box.x, y: b.y + m.box.y, w: m.box.w, h: m.box.h },
+    points: m.points?.map((p) => ({ x: b.x + p.x, y: b.y + p.y })),
+  };
+}
+
+function noteGeom(n) {
   const b = getBoard(n.file);
-  if (!b) return null;
-  return { x: b.x + n.box.x, y: b.y + n.box.y, w: n.box.w, h: n.box.h };
+  return b ? toWorld(n, b) : null;
 }
 
 function ellipse(r, cls) {
@@ -98,6 +113,36 @@ function ellipse(r, cls) {
   e.setAttribute("rx", Math.max(0, r.w / 2));
   e.setAttribute("ry", Math.max(0, r.h / 2));
   e.setAttribute("class", cls);
+  return e;
+}
+
+function svg(tag, attrs) {
+  const e = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  return e;
+}
+
+const pointList = (points) => points.map((p) => `${p.x},${p.y}`).join(" ");
+
+function arrowPath([a, b]) {
+  const angle = Math.atan2(b.y - a.y, b.x - a.x);
+  const size = Math.min(ARROW_HEAD, Math.hypot(b.x - a.x, b.y - a.y) / 2);
+  const wing = (turn) => `${b.x - size * Math.cos(angle + turn)} ${b.y - size * Math.sin(angle + turn)}`;
+  return `M${a.x} ${a.y}L${b.x} ${b.y}M${wing(0.5)}L${b.x} ${b.y}L${wing(-0.5)}`;
+}
+
+/** SVG for a mark in world coordinates. */
+function markEl(m, cls) {
+  const shape = m.shape ?? "ring";
+  const open = shape === "arrow" || (shape === "line" && !m.closed);
+  const classes = `ann-ring${open ? " open" : ""}${cls}`;
+  const { box: r } = m;
+  let e;
+  if (shape === "box") e = svg("rect", { x: r.x, y: r.y, width: r.w, height: r.h, class: classes });
+  else if (shape === "arrow") e = svg("path", { d: arrowPath(m.points), class: classes });
+  else if (shape === "line") e = svg(open ? "polyline" : "polygon", { points: pointList(m.points), class: classes });
+  else e = ellipse(r, classes);
+  if (m.color) e.style.setProperty("--mark", m.color);
   return e;
 }
 
@@ -112,10 +157,10 @@ function render() {
   overlayEl.replaceChildren();
   pinsEl.replaceChildren();
   notes.forEach((n, i) => {
-    const r = ringGeom(n);
-    if (!r) return;
+    const m = noteGeom(n);
+    if (!m) return;
     const done = n.status === "done";
-    const ring = ellipse(r, `ann-ring${done ? " done" : ""}`);
+    const ring = markEl(m, done ? " done" : "");
     ring.dataset.note = n.id;
     overlayEl.append(ring);
     const pin = document.createElement("div");
@@ -123,16 +168,17 @@ function render() {
     pin.dataset.note = n.id;
     pin.textContent = done ? "✓" : String(i + 1);
     pin.title = n.text;
-    const a = Math.PI / 4;
-    pin.style.left = `${r.x + r.w / 2 + (r.w / 2) * Math.cos(a)}px`;
-    pin.style.top = `${r.y + r.h / 2 - (r.h / 2) * Math.sin(a)}px`;
+    const at = pinPoint(m);
+    pin.style.left = `${at.x}px`;
+    pin.style.top = `${at.y}px`;
     pin.style.transform = "scale(var(--inv,1))";
+    if (n.color) pin.style.setProperty("--mark", n.color);
     pin.addEventListener("mouseenter", () => setHover(n.id));
     pin.addEventListener("mouseleave", () => setHover(null));
     pin.addEventListener("click", () => panel.querySelector(`.note-row[data-note="${n.id}"]`)?.scrollIntoView({ block: "nearest" }));
     pinsEl.append(pin);
   });
-  if (draft?.box) overlayEl.append(ellipse(draftWorldRect(), "ann-ring"));
+  if (draft?.box) overlayEl.append(markEl(toWorld(draft, draft.board), ""));
   renderPanel();
   setHover(hoverId);
 }
@@ -196,7 +242,7 @@ function renderPanel() {
   if (!notes.length) {
     const p = document.createElement("p");
     p.className = "empty";
-    p.textContent = "Vali Ring (O) ja tõmba ring ümber koha, mida muuta.";
+    p.textContent = "Vali Ring (O), Kast (B), Joon (P) või Nool (A) ja märgi koht, mida muuta.";
     list.append(p);
   }
   notes.forEach((n, i) => {
@@ -207,6 +253,7 @@ function renderPanel() {
     const num = document.createElement("div");
     num.className = "num";
     num.textContent = done ? "✓" : String(i + 1);
+    if (n.color) num.style.setProperty("--mark", n.color);
     const body = document.createElement("div");
     const txt = document.createElement("div");
     txt.className = "txt";
@@ -239,7 +286,7 @@ function renderPanel() {
     row.append(num, body);
     row.addEventListener("mouseenter", () => setHover(n.id));
     row.addEventListener("mouseleave", () => setHover(null));
-    row.addEventListener("click", () => { const r = ringGeom(n); if (r) centerOn(r); });
+    row.addEventListener("click", () => { const m = noteGeom(n); if (m) centerOn(m.box); });
     list.append(row);
   });
   const footer = document.createElement("footer");
@@ -281,14 +328,16 @@ function draftWorldRect() {
 }
 
 viewportEl.addEventListener("pointerdown", (e) => {
-  if (getTool() !== "ring" || isPanGesture(e) || e.button !== 0) return;
+  const shape = MARK_TOOLS[getTool()];
+  if (!shape || isPanGesture(e) || e.button !== 0) return;
   if (e.target.closest?.("#notebox")) return;
   closeNotebox();
   const board = boardAt(localPoint(e));
   if (!board) return;
   e.preventDefault();
   const w = screenToWorld(localPoint(e), getView());
-  draft = { file: board.file, board, start: { x: w.x - board.x, y: w.y - board.y }, box: null };
+  const start = { x: w.x - board.x, y: w.y - board.y };
+  draft = { file: board.file, board, shape, color: getColor(), start, box: null, points: [start] };
   try { viewportEl.setPointerCapture(e.pointerId); } catch { /* synthetic pointer */ }
 });
 
@@ -298,21 +347,33 @@ viewportEl.addEventListener("pointermove", (e) => {
   const clamp = (v, max) => Math.min(max, Math.max(0, v));
   const px = clamp(w.x - draft.board.x, draft.board.w);
   const py = clamp(w.y - draft.board.y, draft.board.h);
-  draft.box = {
-    x: Math.min(draft.start.x, px), y: Math.min(draft.start.y, py),
-    w: Math.abs(px - draft.start.x), h: Math.abs(py - draft.start.y),
-  };
+  const p = { x: px, y: py };
+  const { points, start, shape } = draft;
+  if (shape === "line") {
+    const last = points.at(-1);
+    // ponytail: a stroke past MAX_POINTS stops growing; that is thousands of px of drawing.
+    if (Math.hypot(p.x - last.x, p.y - last.y) * getView().scale >= MIN_STEP_PX && points.length < MAX_POINTS) points.push(p);
+  } else {
+    draft.points = [start, p];
+  }
+  draft.box = pathBox(draft.points);
   render();
 });
 
 viewportEl.addEventListener("pointerup", () => {
   if (!draft || notebox) return;
   const scale = getView().scale;
-  if (!draft.box || draft.box.w * scale < MIN_RING_PX || draft.box.h * scale < MIN_RING_PX) {
+  const drawn = draft.shape === "line" || draft.shape === "arrow";
+  const tooSmall = !draft.box || (drawn
+    ? pathLength(draft.points) * scale < MIN_LINE_PX
+    : draft.box.w * scale < MIN_RING_PX || draft.box.h * scale < MIN_RING_PX);
+  if (tooSmall) {
     draft = null;
     render();
     return;
   }
+  draft.closed = draft.shape === "line" && isClosedPath(draft.points, CLOSE_LOOP_PX / scale);
+  render();
   openNotebox();
 });
 
@@ -352,7 +413,7 @@ function openNotebox() {
   positionNotebox();
   ta.focus();
   // Read now: the page may be unloaded if the user pans away before saving.
-  draft.elements = captureElements(draft.board.el, roundBox(draft.box));
+  draft.elements = captureElements(draft.board.el, draft);
 }
 
 function closeNotebox() {
@@ -367,6 +428,7 @@ function cancelDraft() {
 }
 
 const roundBox = (b) => ({ x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.w), h: Math.round(b.h) });
+const roundPoints = (points) => points.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }));
 
 async function saveDraft(text) {
   const d = draft;
@@ -377,6 +439,10 @@ async function saveDraft(text) {
     box: roundBox(d.box),
     text: text.trim(),
     elements: d.elements,
+    shape: d.shape,
+    color: d.color,
+    ...(d.shape === "line" && { closed: d.closed }),
+    ...((d.shape === "line" || d.shape === "arrow") && { points: roundPoints(d.points) }),
   };
   saving = true;
   try {
