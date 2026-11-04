@@ -66,6 +66,10 @@ try:
         pg.goto(url)
         pg.wait_for_selector("iframe")
         pg.wait_for_timeout(800)
+        # will-change pins #world to at least 100% raster size, so a book-sized canvas
+        # costs GPU memory for all of it at any zoom (146 pages: 1222 MB vs 176 MB).
+        check("canvas world not pinned to full-size raster",
+              pg.evaluate("getComputedStyle(document.getElementById('world')).willChange") == "auto")
 
         def draw_ring(text):
             pg.keyboard.press("o")
