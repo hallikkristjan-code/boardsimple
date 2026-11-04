@@ -1,6 +1,6 @@
 import http from "node:http";
 import { watch } from "node:fs";
-import { readFile, mkdir, stat } from "node:fs/promises";
+import { appendFile, readFile, mkdir, stat } from "node:fs/promises";
 import { join, resolve, sep, extname, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { scanScreens } from "./scan.mjs";
@@ -99,6 +99,13 @@ function readJson(req) {
     });
     req.on("error", reject);
   });
+}
+
+function logLine(b) {
+  if (!b || typeof b.event !== "string" || !/^[a-z-]{1,40}$/.test(b.event)) throw new HttpError(400, "invalid event");
+  const entry = { at: new Date().toISOString(), event: b.event };
+  for (const k of ["scale", "loaded", "boards"]) if (typeof b[k] === "number") entry[k] = b[k];
+  return `${JSON.stringify(entry)}\n`;
 }
 
 function validateNote(b) {
@@ -212,6 +219,11 @@ export async function startServer({ root, port, appDir = APP_DIR }) {
     if (rawPath === "/api/annotations") {
       if (req.method === "GET") return sendJson(res, 200, await store.read());
       if (req.method === "POST") return sendJson(res, 201, await store.add(validateNote(await readJson(req))));
+    }
+    if (rawPath === "/api/client-log" && req.method === "POST") {
+      await appendFile(join(canvasDir, "client.log"), logLine(await readJson(req)));
+      res.writeHead(204);
+      return res.end();
     }
     const m = rawPath.match(/^\/api\/annotations\/([A-Za-z0-9-]+)$/);
     if (m && req.method === "PATCH") {

@@ -1,6 +1,6 @@
 // Pure canvas math. No DOM — shared by the browser and node tests.
 
-export const MIN_SCALE = 0.05;
+export const MIN_SCALE = 0.02;
 export const MAX_SCALE = 4;
 
 /** One row per group (in input order), boards left to right. */
