@@ -108,8 +108,17 @@ function logLine(b) {
   return `${JSON.stringify(entry)}\n`;
 }
 
+const SHAPES = new Set(["ring", "box", "line", "arrow"]);
+const MAX_POINTS = 2000;
+const isPoint = (p) => typeof p?.x === "number" && typeof p?.y === "number";
+
 function validateNote(b) {
+  const shape = b?.shape ?? "ring";
+  const drawn = shape === "line" || shape === "arrow";
   const ok =
+    SHAPES.has(shape) &&
+    (b?.color == null || /^#[0-9a-f]{6}$/.test(b.color)) &&
+    (!drawn || (Array.isArray(b.points) && b.points.length >= 2 && b.points.length <= MAX_POINTS && b.points.every(isPoint))) &&
     b && typeof b === "object" &&
     typeof b.file === "string" &&
     typeof b.text === "string" &&
@@ -122,6 +131,10 @@ function validateNote(b) {
     box: { x: b.box.x, y: b.box.y, w: b.box.w, h: b.box.h },
     text: b.text,
     elements: b.elements ?? [],
+    shape,
+    color: b.color ?? null,
+    ...(drawn && { points: b.points.map(({ x, y }) => ({ x, y })) }),
+    ...(shape === "line" && { closed: b.closed === true }),
   };
 }
 

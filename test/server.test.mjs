@@ -228,3 +228,25 @@ test("client log refuses a foreign origin", async () => {
   const r = await fetch(u("/api/client-log"), json("POST", { event: "gpu-context-lost" }, { origin: "https://evil.example" }));
   assert.equal(r.status, 403);
 });
+
+test("note keeps its shape, points and colour", async () => {
+  const points = [{ x: 1, y: 2 }, { x: 30, y: 2 }];
+  const r = await fetch(u("/api/annotations"), json("POST", { ...note, shape: "line", closed: false, points, color: "#16a34a" }));
+  const created = await r.json();
+  assert.equal(created.shape, "line");
+  assert.equal(created.closed, false);
+  assert.deepEqual(created.points, points);
+  assert.equal(created.color, "#16a34a");
+});
+
+test("note without a shape stays a ring", async () => {
+  const created = await (await fetch(u("/api/annotations"), json("POST", note))).json();
+  assert.equal(created.shape, "ring");
+  assert.equal(created.color, null);
+});
+
+test("note with a bad shape, colour or points is rejected", async () => {
+  for (const bad of [{ shape: "star" }, { color: "red;x" }, { shape: "line", points: "x" }, { shape: "line", points: [{ x: "1", y: 2 }] }]) {
+    assert.equal((await fetch(u("/api/annotations"), json("POST", { ...note, ...bad }))).status, 400, JSON.stringify(bad));
+  }
+});

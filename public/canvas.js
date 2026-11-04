@@ -1,6 +1,8 @@
 import { layoutBoards, zoomAt, fitAll, screenToWorld, labelMode, nearbyBoards } from "./geometry.js";
 
 const AUTO_FALLBACK_H = 900;
+const COLOR_KEY = "louend-color";
+export const MARK_TOOLS = { ring: "ring", kast: "box", joon: "line", nool: "arrow" }; // tool -> note shape
 // Screen px around the viewport. The gap stops pages reloading on small back-and-forth pans.
 const LOAD_MARGIN = 600;
 const UNLOAD_MARGIN = 1500;
@@ -14,6 +16,7 @@ const connEl = document.getElementById("conn");
 
 let view = { tx: 0, ty: 0, scale: 1 };
 let tool = "kasi";
+let color = null;
 let screens = [];
 let root = "";
 let layout = { boards: [], groups: [] };
@@ -28,6 +31,7 @@ let fittedOnce = false;
 
 export const getView = () => view;
 export const getTool = () => tool;
+export const getColor = () => color;
 export const getScreens = () => screens;
 export const getRoot = () => root;
 export { viewportEl, worldEl, overlayEl };
@@ -51,11 +55,18 @@ export function boardAt(p) {
 
 export function setTool(name) {
   tool = name;
-  document.body.classList.remove("tool-vali", "tool-kasi", "tool-ring");
+  document.body.classList.remove("tool-vali", "tool-kasi", ...Object.keys(MARK_TOOLS).map((t) => `tool-${t}`));
   document.body.classList.add(`tool-${name}`);
-  for (const b of document.querySelectorAll("#tools button")) {
+  for (const b of document.querySelectorAll("#tools button[data-tool]")) {
     b.setAttribute("aria-pressed", String(b.dataset.tool === name));
   }
+}
+
+function setColor(next) {
+  const swatches = [...document.querySelectorAll("#colors button")];
+  color = (swatches.find((b) => b.dataset.color === next) ?? swatches[0]).dataset.color;
+  localStorage.setItem(COLOR_KEY, color);
+  for (const b of swatches) b.setAttribute("aria-pressed", String(b.dataset.color === color));
 }
 
 export function setView(v) {
@@ -235,6 +246,9 @@ window.addEventListener("keydown", (e) => {
   if (k === "v") setTool("vali");
   if (k === "h") setTool("kasi");
   if (k === "o") setTool("ring");
+  if (k === "b") setTool("kast");
+  if (k === "p") setTool("joon");
+  if (k === "a") setTool("nool");
   if (k === "1" && e.shiftKey) fit();
 });
 window.addEventListener("keyup", (e) => {
@@ -244,8 +258,11 @@ window.addEventListener("keyup", (e) => {
   }
 });
 
-for (const b of document.querySelectorAll("#tools button")) {
+for (const b of document.querySelectorAll("#tools button[data-tool]")) {
   b.addEventListener("click", () => setTool(b.dataset.tool));
+}
+for (const b of document.querySelectorAll("#colors button")) {
+  b.addEventListener("click", () => setColor(b.dataset.color));
 }
 document.getElementById("fit").addEventListener("click", fit);
 window.addEventListener("resize", () => setView(view));
@@ -286,6 +303,7 @@ gpuProbe.getContext("webgl");
 document.body.append(gpuProbe);
 
 setTool("kasi");
+setColor(localStorage.getItem(COLOR_KEY));
 setView(view);
 loadScreens().catch((e) => {
   emptyEl.hidden = false;

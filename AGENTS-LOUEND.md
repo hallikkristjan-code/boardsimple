@@ -19,10 +19,16 @@ Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasuta
 ## Märkused ("vaata märkused üle")
 
 1. Loe `.canvas/annotations.json`. Tööta ainult märkustega, mille `status` on `"open"`.
-2. Iga märkus: `file` (milline ekraan), `text` (mida kasutaja tahab), `box` (ringi
-   asukoht artboardi pikslites), `elements` (ringi alla jäänud elemendid:
+2. Iga märkus: `file` (milline ekraan), `text` (mida kasutaja tahab), `box` (märgi
+   ümbritsev ala artboardi pikslites), `elements` (märgitud elemendid:
    `selector`, `tag`, `text`, `box`). Kasuta `selector`-it ja `text`-i, et leida
-   õige koht failis.
+   õige koht failis. `shape` ütleb, kuidas kasutaja märkis:
+   - `ring` või `box`: märgitud on ala sees olev.
+   - `line`, `closed: true`: joon koha ümber, märgitud on joone sees olev.
+   - `line`, `closed: false`: allakriipsutus, märgitud on joone peal ja kohal olev.
+   - `arrow`: märgitud on see, millele nool osutab. `points` viimane punkt on noole ots.
+   `color` on kasutaja valik ja sellel pole tähendust. Vanadel märkustel `shape` puudub:
+   need on ringid.
 3. Kui `fileHash` ei vasta faili praegusele sisule (sha256), on faili vahepeal
    muudetud — selektor võib olla nihkunud; kontrolli `text`-i järgi.
 4. Muuda HTML-faili. Ära loo uut faili, kui märkus ei palu varianti.
