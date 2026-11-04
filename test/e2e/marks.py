@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 
 repo = Path(__file__).resolve().parents[2]
 work = Path(tempfile.mkdtemp(prefix="louend-marks-"))
-GREEN = "#16a34a"
+GREEN = "#2f8f5b"
 
 page = """<!doctype html><html lang="et"><head><meta charset="utf-8">
 <meta name="artboard" content="width=800,height=800"><title>Leht</title>
@@ -102,6 +102,15 @@ try:
         pg.wait_for_selector("iframe")
         pg.wait_for_timeout(500)
 
+        # Fit keeps every board clear of the floating chrome.
+        board = pg.locator("iframe").bounding_box()
+        tools = pg.locator("#tools").bounding_box()
+        panel = pg.locator("#panel").bounding_box()
+        top = pg.locator("#top").bounding_box()
+        check("fit clears the tools", board["x"] >= tools["x"] + tools["width"])
+        check("fit clears the notes", board["x"] + board["width"] <= panel["x"])
+        check("fit clears the title", board["y"] >= top["y"] + top["height"])
+
         # Box: a corner element is outside an ellipse but inside a box.
         pg.click('#colors button[aria-label="Roheline"]')
         pg.keyboard.press("b")
@@ -112,9 +121,9 @@ try:
         check("box finds the element in its corner", "#nurk" in ids(note))
         el = pg.locator("#overlay rect")
         check("box drawn as a rectangle", el.count() == 1)
-        check("box uses the colour", pg.evaluate("getComputedStyle(document.querySelector('#overlay rect')).stroke") == "rgb(22, 163, 74)")
-        check("pin uses the colour", pg.evaluate("getComputedStyle(document.querySelector('.ann-pin')).backgroundColor") == "rgb(22, 163, 74)")
-        check("panel number uses the colour", pg.evaluate("getComputedStyle(document.querySelector('.note-row .num')).backgroundColor") == "rgb(22, 163, 74)")
+        check("box uses the colour", pg.evaluate("getComputedStyle(document.querySelector('#overlay rect')).stroke") == "rgb(47, 143, 91)")
+        check("pin uses the colour", pg.evaluate("getComputedStyle(document.querySelector('.ann-pin')).backgroundColor") == "rgb(47, 143, 91)")
+        check("panel number uses the colour", pg.evaluate("getComputedStyle(document.querySelector('.note-row .num')).backgroundColor") == "rgb(47, 143, 91)")
 
         # Line that returns to its start: marks what is inside, not what is near.
         pg.keyboard.press("p")

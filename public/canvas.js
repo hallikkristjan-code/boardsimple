@@ -35,6 +35,7 @@ export const getColor = () => color;
 export const getScreens = () => screens;
 export const getRoot = () => root;
 export { viewportEl, worldEl, overlayEl };
+export const freeWidth = () => viewportEl.clientWidth - 304; // left of the notes panel
 export const onViewChange = (cb) => viewListeners.add(cb);
 export const onScreensChange = (cb) => screensListeners.add(cb);
 export const onLayoutChange = (cb) => layoutListeners.add(cb);
@@ -79,6 +80,9 @@ export function setView(v) {
   for (const cb of viewListeners) cb(view);
 }
 
+// Screen px the floating chrome covers on each side of the canvas.
+const CHROME = { left: 68, top: 60, right: 304, bottom: 12 };
+
 function viewportSize() {
   const r = viewportEl.getBoundingClientRect();
   return { w: r.width, h: r.height };
@@ -86,13 +90,18 @@ function viewportSize() {
 
 export function fit() {
   // Reserve room above each board for the board + group labels (~64 screen px at 100%).
-  setView(fitAll(layout.boards.map((b) => ({ ...b, y: b.y - 64, h: b.h + 64 })), viewportSize()));
+  const { w, h } = viewportSize();
+  const free = { w: w - CHROME.left - CHROME.right, h: h - CHROME.top - CHROME.bottom };
+  const v = fitAll(layout.boards.map((b) => ({ ...b, y: b.y - 64, h: b.h + 64 })), free, 16);
+  setView({ ...v, tx: v.tx + CHROME.left, ty: v.ty + CHROME.top });
 }
 
 /** Pan so a world-space rect is centred. */
 export function centerOn(rect) {
   const { w, h } = viewportSize();
-  setView({ ...view, tx: w / 2 - (rect.x + rect.w / 2) * view.scale, ty: h / 2 - (rect.y + rect.h / 2) * view.scale });
+  const cx = CHROME.left + (w - CHROME.left - CHROME.right) / 2;
+  const cy = CHROME.top + (h - CHROME.top - CHROME.bottom) / 2;
+  setView({ ...view, tx: cx - (rect.x + rect.w / 2) * view.scale, ty: cy - (rect.y + rect.h / 2) * view.scale });
 }
 
 const encodePath = (file) => file.split("/").slice(1).map(encodeURIComponent).join("/");

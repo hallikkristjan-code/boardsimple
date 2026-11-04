@@ -10,14 +10,17 @@
 </head>
 <body class="tool-kasi">
   <header id="top">
-    <strong id="project">…</strong>
-    <span id="count" class="muted"></span>
+    <div id="title" class="island">
+      <strong id="project">…</strong>
+      <span id="count"></span>
+    </div>
     <span id="conn" role="status" hidden></span>
-    <span class="grow"></span>
-    <button id="fit" type="button">Mahuta kõik</button>
-    <span id="zoom" class="pill">100%</span>
+    <div id="view" class="island">
+      <button id="fit" type="button">Mahuta kõik</button>
+      <span id="zoom">100%</span>
+    </div>
   </header>
-  <nav id="tools" aria-label="Tööriistad">
+  <nav id="tools" class="island" aria-label="Tööriistad">
     <button type="button" data-tool="vali" title="Vali — klõpsa ja keri ekraani sees (V)" aria-label="Vali">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 8-6 1.5L10 19z"/></svg>
     </button>
@@ -37,11 +40,11 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19L19 5M10 5h9v9"/></svg>
     </button>
     <div id="colors" role="group" aria-label="Märgi värv">
-      <button type="button" data-color="#ff3b30" style="--c:#ff3b30" title="Punane" aria-label="Punane"></button>
-      <button type="button" data-color="#ea580c" style="--c:#ea580c" title="Oranž" aria-label="Oranž"></button>
-      <button type="button" data-color="#16a34a" style="--c:#16a34a" title="Roheline" aria-label="Roheline"></button>
-      <button type="button" data-color="#2563eb" style="--c:#2563eb" title="Sinine" aria-label="Sinine"></button>
-      <button type="button" data-color="#9333ea" style="--c:#9333ea" title="Lilla" aria-label="Lilla"></button>
+      <button type="button" data-color="#d9412b" style="--c:#d9412b" title="Punane" aria-label="Punane"></button>
+      <button type="button" data-color="#c9741f" style="--c:#c9741f" title="Oranž" aria-label="Oranž"></button>
+      <button type="button" data-color="#2f8f5b" style="--c:#2f8f5b" title="Roheline" aria-label="Roheline"></button>
+      <button type="button" data-color="#2f6fc4" style="--c:#2f6fc4" title="Sinine" aria-label="Sinine"></button>
+      <button type="button" data-color="#7a55c7" style="--c:#7a55c7" title="Lilla" aria-label="Lilla"></button>
     </div>
   </nav>
   <main id="viewport">
@@ -51,7 +54,7 @@
     </div>
     <p id="empty" hidden>Ekraane pole. Kirjuta HTML-failid kausta <code>screens/</code> (nt <code>screens/suunad/a.html</code>).</p>
   </main>
-  <aside id="panel" aria-label="Märkused"></aside>
+  <aside id="panel" class="island" aria-label="Märkused"></aside>
   <script type="module" src="/app/canvas.js"></script>
   <script type="module" src="/app/annotate.js"></script>
 </body>

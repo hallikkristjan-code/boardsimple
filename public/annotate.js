@@ -1,6 +1,6 @@
 import { isClosedPath, markSamples, pathBox, pathLength, pinPoint, screenToWorld, worldToScreen } from "./geometry.js";
 import {
-  getView, getTool, getColor, getScreens, getRoot, getBoard, boardAt, centerOn, isPanGesture, MARK_TOOLS,
+  freeWidth, getView, getTool, getColor, getScreens, getRoot, getBoard, boardAt, centerOn, isPanGesture, MARK_TOOLS,
   onViewChange, onScreensChange, onLayoutChange, onReconnect, viewportEl, worldEl, overlayEl, events,
 } from "./canvas.js";
 
@@ -236,13 +236,19 @@ function editInline(row, n, caret = null) {
 function renderPanel() {
   const open = notes.filter((n) => n.status !== "done").length;
   const h = document.createElement("h2");
-  h.textContent = `Märkused (${notes.length})`;
+  h.textContent = "Märkused";
+  if (open) {
+    const count = document.createElement("span");
+    count.className = "n";
+    count.textContent = String(open);
+    h.append(count);
+  }
   const list = document.createElement("div");
   list.className = "list";
   if (!notes.length) {
     const p = document.createElement("p");
     p.className = "empty";
-    p.textContent = "Vali Ring (O), Kast (B), Joon (P) või Nool (A) ja märgi koht, mida muuta.";
+    p.textContent = "Vali vasakult tööriist ja märgi koht, mida muuta.";
     list.append(p);
   }
   notes.forEach((n, i) => {
@@ -260,8 +266,7 @@ function renderPanel() {
     txt.textContent = n.text || "(tühi märkus)";
     const meta = document.createElement("div");
     meta.className = "meta";
-    const el0 = n.elements?.[0];
-    meta.textContent = `${screenOf(n.file)?.title ?? n.file}${el0 ? ` · <${el0.selector.split(" > ").pop()}>` : ""}`;
+    meta.textContent = screenOf(n.file)?.title ?? n.file;
     body.append(txt, meta);
     if (isStale(n)) {
       const badge = document.createElement("span");
@@ -290,24 +295,30 @@ function renderPanel() {
     list.append(row);
   });
   const footer = document.createElement("footer");
-  const status = document.createElement("div");
-  status.className = "status";
-  status.textContent = `${open} avatud märkust · .canvas/annotations.json`;
-  const copy = button("Kopeeri käsk agendile", async () => {
+  const copyLabel = document.createElement("span");
+  const say = (text) => { copyLabel.textContent = text; };
+  say("Kopeeri käsk agendile");
+  const copy = button("", async () => {
     const sepChar = getRoot().includes("\\") ? "\\" : "/";
     const path = `${getRoot()}${sepChar}.canvas${sepChar}annotations.json`;
     try {
       await navigator.clipboard.writeText(`vaata märkused üle: ${path} (louend: ${location.origin})`);
-      copy.textContent = "Kopeeritud";
+      say("Kopeeritud");
     } catch {
-      copy.textContent = "Kopeerimine ei õnnestunud";
+      say("Kopeerimine ei õnnestunud");
     }
-    setTimeout(() => { copy.textContent = "Kopeeri käsk agendile"; }, 1500);
+    setTimeout(() => say("Kopeeri käsk agendile"), 1500);
   });
-  footer.append(status, copy);
+  const copyIcon = svg("svg", { viewBox: "0 0 24 24", "aria-hidden": "true" });
+  copyIcon.append(
+    svg("rect", { x: 8, y: 8, width: 12, height: 12, rx: 2 }),
+    svg("path", { d: "M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2" }),
+  );
+  copy.append(copyIcon, copyLabel);
+  footer.append(copy);
   const active = document.activeElement;
   const caret = active?.tagName === "TEXTAREA" && panel.contains(active) ? active.selectionStart : -1;
-  panel.replaceChildren(h, list, footer);
+  panel.replaceChildren(h, list, ...(open ? [footer] : []));
   if (editing) {
     // Live updates rebuild the panel; reopen the edit with the unsaved text.
     const row = list.querySelector(`.note-row[data-note="${CSS.escape(editing.id)}"]`);
@@ -381,10 +392,10 @@ function positionNotebox() {
   if (!notebox || !draft) return;
   const r = draftWorldRect();
   const p = worldToScreen({ x: r.x + r.w, y: r.y }, getView());
-  const vw = viewportEl.clientWidth;
+  const vw = freeWidth();
   const left = p.x + 12 + 240 > vw ? worldToScreen({ x: r.x, y: r.y }, getView()).x - 252 : p.x + 12;
-  notebox.style.left = `${Math.max(8, left)}px`;
-  notebox.style.top = `${Math.max(8, p.y)}px`;
+  notebox.style.left = `${Math.max(68, left)}px`;
+  notebox.style.top = `${Math.max(60, p.y)}px`;
 }
 
 function openNotebox() {
