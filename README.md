@@ -33,6 +33,7 @@ Proovi demoga: `louend examples/demo`.
 - **Tööriistad:** Vali (V) — klõpsa ja keri ekraani sees · Käsi (H või tühik) — nihuta · Ring (O) — märgi.
 - **Suum:** hiireratas või pinch; "Mahuta kõik" (Shift+1).
 - **Agendile:** märkused salvestuvad kohe `.canvas/annotations.json`-i. Vajuta "Kopeeri käsk agendile" ja kleebi vestlusesse.
+- **Tõrkeotsing:** kui GPU protsess kukub või lähtestub, tekib rida faili `.canvas/client.log`. Puuduvaid graafikatükke see ei märka.
 
 Agendi juhend projekti `CLAUDE.md`-sse: [AGENTS-LOUEND.md](AGENTS-LOUEND.md).
 

@@ -1,6 +1,6 @@
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import net from "node:net";
@@ -206,4 +206,25 @@ test("the app declares an icon and the server serves it as PNG", async () => {
   assert.equal(r.headers.get("content-type"), "image/png");
   const bytes = new Uint8Array(await r.arrayBuffer());
   assert.deepEqual([...bytes.slice(1, 4)], [0x50, 0x4e, 0x47]);
+});
+
+test("client log appends one line and keeps only known fields", async () => {
+  const body = { event: "gpu-context-lost", scale: 0.05, loaded: 146, boards: 146, extra: "x" };
+  assert.equal((await fetch(u("/api/client-log"), json("POST", body))).status, 204);
+  const lines = (await readFile(join(root, ".canvas", "client.log"), "utf8")).trim().split("\n");
+  const entry = JSON.parse(lines.at(-1));
+  assert.equal(entry.event, "gpu-context-lost");
+  assert.equal(entry.loaded, 146);
+  assert.ok(!Number.isNaN(Date.parse(entry.at)));
+  assert.equal(entry.extra, undefined);
+});
+
+test("client log rejects a bad event", async () => {
+  assert.equal((await fetch(u("/api/client-log"), json("POST", { event: "x\ny" }))).status, 400);
+  assert.equal((await fetch(u("/api/client-log"), json("POST", "[]"))).status, 400);
+});
+
+test("client log refuses a foreign origin", async () => {
+  const r = await fetch(u("/api/client-log"), json("POST", { event: "gpu-context-lost" }, { origin: "https://evil.example" }));
+  assert.equal(r.status, 403);
 });

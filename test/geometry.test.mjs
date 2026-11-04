@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  layoutBoards, screenToWorld, worldToScreen, zoomAt, fitAll, ellipseSamples, labelMode, nearbyBoards,
+  layoutBoards, screenToWorld, worldToScreen, zoomAt, fitAll, ellipseSamples, labelMode, nearbyBoards, MIN_SCALE,
 } from "../public/geometry.js";
 
 const S = (file, group, width, height) => ({ file, group, width, height });
@@ -34,9 +34,9 @@ test("zoomAt keeps the cursor point fixed", () => {
   assert.ok(Math.abs(before.x - after.x) < 1e-9 && Math.abs(before.y - after.y) < 1e-9);
 });
 
-test("zoomAt clamps scale to [0.05, 4]", () => {
+test("zoomAt clamps scale to [MIN_SCALE, 4]", () => {
   assert.equal(zoomAt({ tx: 0, ty: 0, scale: 1 }, { x: 0, y: 0 }, 100).scale, 4);
-  assert.equal(zoomAt({ tx: 0, ty: 0, scale: 1 }, { x: 0, y: 0 }, 0.0001).scale, 0.05);
+  assert.equal(zoomAt({ tx: 0, ty: 0, scale: 1 }, { x: 0, y: 0 }, 0.0001).scale, MIN_SCALE);
 });
 
 test("fitAll shows the whole board with margin", () => {
@@ -89,4 +89,12 @@ test("nearbyBoards margin is in screen px, so it reaches further when zoomed out
   const view = { tx: 0, ty: 0, scale: 0.25 }; // 500 px viewport shows world x 0..2000
   assert.equal(nearbyBoards(boards, view, { w: 500, h: 500 }, 0).size, 0);
   assert.equal(nearbyBoards(boards, view, { w: 500, h: 500 }, 100).size, 1); // 100 px = 400 world px
+});
+
+test("fitAll fits a book-sized project without cutting off rows", () => {
+  const boards = Array.from({ length: 18 }, (_, i) => ({ file: `${i}`, x: 0, y: i * 1012, w: 576, h: 864 }));
+  const viewport = { w: 1100, h: 856 };
+  const v = fitAll(boards, viewport);
+  assert.ok(v.ty >= 0, `first row starts at ${v.ty}`);
+  assert.ok(v.ty + (17 * 1012 + 864) * v.scale <= viewport.h, "last row fits");
 });

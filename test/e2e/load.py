@@ -132,9 +132,8 @@ def headless_checks(p):
     check("all pages mounted when all are in view", pg.evaluate(MOUNTED) == PAGES)
 
     first = board_center(pg, "lk 0")
-    # Fit stops at the minimum zoom, so the first row can sit under the header.
-    top = pg.locator("#viewport").bounding_box()["y"]
-    zoom_to(pg, 100, first["x"], max(first["y"], top + 20))
+    check("fit shows the first row below the header", first["y"] > pg.locator("#viewport").bounding_box()["y"])
+    zoom_to(pg, 100, first["x"], first["y"])
     pg.wait_for_timeout(300)
     mounted = pg.evaluate(MOUNTED)
     print(f"     mounted at {pg.inner_text('#zoom')}: {mounted}/{PAGES}")

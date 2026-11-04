@@ -59,7 +59,7 @@ def check(name, cond):
 try:
     with sync_playwright() as p:
         channel = os.environ.get("LOUEND_E2E_CHANNEL") or None
-        b = p.chromium.launch(channel=channel)
+        b = p.chromium.launch(channel=channel, args=["--enable-unsafe-swiftshader"])
         pg = b.new_page(viewport={"width": 1400, "height": 900})
         alerts = []
         pg.on("dialog", lambda d: (alerts.append(d.message), d.accept()))
@@ -70,6 +70,18 @@ try:
         # costs GPU memory for all of it at any zoom (146 pages: 1222 MB vs 176 MB).
         check("canvas world not pinned to full-size raster",
               pg.evaluate("getComputedStyle(document.getElementById('world')).willChange") == "auto")
+        check("GPU probe present", pg.locator("#gpu-probe").count() == 1)
+        lost = pg.evaluate("""() => {
+          const ext = document.getElementById('gpu-probe')?.getContext('webgl')?.getExtension('WEBGL_lose_context');
+          ext?.loseContext();
+          return Boolean(ext);
+        }""")
+        if lost:
+            pg.wait_for_timeout(500)
+            log = work / ".canvas/client.log"
+            check("lost GPU context is logged", log.exists() and "gpu-context-lost" in log.read_text(encoding="utf-8"))
+        else:
+            print("SKIP lost GPU context is logged: no WebGL in this browser")
 
         def draw_ring(text):
             pg.keyboard.press("o")
@@ -179,16 +191,17 @@ try:
         check(f"no label collisions while zooming out {sorted(collisions)[:3]}", not collisions)
         check(f"label modes exercised {sorted(modes)}", modes >= {"boards", "none"})
 
-        # 6. With labels hidden, hovering a board shows its full name.
+        # 6. With labels hidden, hovering a board shows its full name. Uses a board without
+        #    notes: at minimum zoom a pin covers a whole phone-sized board.
         check("zoomed out to no labels", pg.evaluate("document.getElementById('world').dataset.labels") == "none")
         label_state = """() => {
-          const l = document.querySelector(".board-label");
+          const l = [...document.querySelectorAll(".board-label")].at(-1);
           return { width: l.getBoundingClientRect().width, cut: l.scrollWidth > l.clientWidth };
         }"""
         pg.mouse.move(5, 5)
         pg.wait_for_timeout(100)
         check("label hidden without hover", pg.evaluate(label_state)["width"] == 0)
-        box = pg.locator(".board").first.bounding_box()
+        box = pg.locator(".board").last.bounding_box()
         pg.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
         pg.wait_for_timeout(100)
         shown_label = pg.evaluate(label_state)

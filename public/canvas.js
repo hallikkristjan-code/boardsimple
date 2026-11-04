@@ -268,6 +268,23 @@ events.addEventListener("open", () => {
 });
 export { events };
 
+// A GPU reset can leave gray areas with no error anywhere. A lost WebGL context is the one
+// signal a page gets, so a tiny hidden context leaves a trace in .canvas/client.log.
+const gpuProbe = document.createElement("canvas");
+gpuProbe.id = "gpu-probe";
+gpuProbe.hidden = true;
+gpuProbe.addEventListener("webglcontextlost", (e) => {
+  e.preventDefault(); // lets the browser restore the context, so later resets are seen too
+  const loaded = [...boardEls.values()].filter((r) => r.iframe.getAttribute("src") !== "about:blank").length;
+  fetch("/api/client-log", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ event: "gpu-context-lost", scale: view.scale, loaded, boards: boardEls.size }),
+  }).catch(console.error);
+});
+gpuProbe.getContext("webgl");
+document.body.append(gpuProbe);
+
 setTool("kasi");
 setView(view);
 loadScreens().catch((e) => {
