@@ -197,3 +197,13 @@ test("busy last port gives a friendly error instead of a bad-port crash", async 
     blocker.close();
   }
 });
+
+test("the app declares an icon and the server serves it as PNG", async () => {
+  const html = await (await fetch(u("/"))).text();
+  assert.match(html, /<link rel="icon"[^>]*href="\/app\/icon\.png"/);
+  const r = await fetch(u("/app/icon.png"));
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get("content-type"), "image/png");
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  assert.deepEqual([...bytes.slice(1, 4)], [0x50, 0x4e, 0x47]);
+});
