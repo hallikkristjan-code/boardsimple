@@ -1,6 +1,9 @@
-import { layoutBoards, zoomAt, fitAll, screenToWorld, labelMode } from "./geometry.js";
+import { layoutBoards, zoomAt, fitAll, screenToWorld, labelMode, nearbyBoards } from "./geometry.js";
 
 const AUTO_FALLBACK_H = 900;
+// Screen px around the viewport. The gap stops pages reloading on small back-and-forth pans.
+const LOAD_MARGIN = 600;
+const UNLOAD_MARGIN = 1500;
 const viewportEl = document.getElementById("viewport");
 const worldEl = document.getElementById("world");
 const boardsEl = document.getElementById("boards");
@@ -61,6 +64,7 @@ export function setView(v) {
   worldEl.style.setProperty("--inv", String(1 / view.scale));
   worldEl.dataset.labels = labelMode(view.scale);
   zoomEl.textContent = `${Math.round(view.scale * 100)}%`;
+  syncLoaded();
   for (const cb of viewListeners) cb(view);
 }
 
@@ -104,11 +108,23 @@ function relayout() {
     groupEls.push(el);
   }
   emptyEl.hidden = screens.length > 0;
+  syncLoaded();
   for (const cb of layoutListeners) cb(layout);
 }
 
+/** Keep a document only in iframes near the viewport; the rest stay blank white boards. */
+function syncLoaded() {
+  const size = viewportSize();
+  const near = nearbyBoards(layout.boards, view, size, LOAD_MARGIN);
+  const keep = nearbyBoards(layout.boards, view, size, UNLOAD_MARGIN);
+  for (const [file, rec] of boardEls) {
+    const url = near.has(file) ? rec.url : keep.has(file) ? rec.iframe.getAttribute("src") : "about:blank";
+    if (url !== rec.iframe.getAttribute("src")) rec.iframe.src = url;
+  }
+}
+
 function measure(s, iframe) {
-  if (s.height !== "auto") return;
+  if (s.height !== "auto" || iframe.getAttribute("src") === "about:blank") return;
   try {
     const h = Math.ceil(iframe.contentDocument.documentElement.scrollHeight);
     if (h > 0 && measured.get(s.file) !== h) {
@@ -126,10 +142,11 @@ function createBoard(s) {
   label.style.transform = "scale(var(--inv,1))";
   const iframe = document.createElement("iframe");
   iframe.setAttribute("scrolling", "no");
+  iframe.src = "about:blank";
   iframe.addEventListener("load", () => measure(screens.find((x) => x.file === s.file) ?? s, iframe));
   wrap.append(label, iframe);
   boardsEl.append(wrap);
-  const rec = { wrap, label, iframe, hash: null };
+  const rec = { wrap, label, iframe, url: null };
   boardEls.set(s.file, rec);
   return rec;
 }
@@ -149,10 +166,10 @@ function syncBoards(next) {
     rec.label.title = s.title;
     rec.iframe.title = s.title;
     const version = `${s.hash.slice(0, 12)}${(s.assetsHash ?? "").slice(0, 12)}`;
-    if (rec.hash !== version) {
-      rec.hash = version;
-      rec.iframe.src = `/screens/${encodePath(s.file)}?v=${version}`;
-    }
+    const url = `/screens/${encodePath(s.file)}?v=${version}`;
+    // A loaded page takes the new version now; an unloaded one picks it up in syncLoaded.
+    if (rec.url && rec.url !== url && rec.iframe.getAttribute("src") === rec.url) rec.iframe.src = url;
+    rec.url = url;
   }
   screens = next;
   relayout();

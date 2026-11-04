@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  layoutBoards, screenToWorld, worldToScreen, zoomAt, fitAll, ellipseSamples, labelMode,
+  layoutBoards, screenToWorld, worldToScreen, zoomAt, fitAll, ellipseSamples, labelMode, nearbyBoards,
 } from "../public/geometry.js";
 
 const S = (file, group, width, height) => ({ file, group, width, height });
@@ -72,4 +72,21 @@ test("labelMode drops labels that no longer fit the row gap", () => {
   assert.equal(labelMode(0.23), "boards");
   assert.equal(labelMode(0.18), "boards");
   assert.equal(labelMode(0.1), "none");
+});
+
+test("nearbyBoards keeps boards inside the viewport plus margin", () => {
+  const boards = [
+    { file: "in", x: 100, y: 100, w: 100, h: 100 },
+    { file: "near", x: 1100, y: 100, w: 100, h: 100 },
+    { file: "far", x: 5000, y: 100, w: 100, h: 100 },
+  ];
+  const got = nearbyBoards(boards, { tx: 0, ty: 0, scale: 1 }, { w: 1000, h: 800 }, 200);
+  assert.deepEqual([...got].sort(), ["in", "near"]);
+});
+
+test("nearbyBoards margin is in screen px, so it reaches further when zoomed out", () => {
+  const boards = [{ file: "a", x: 2200, y: 0, w: 100, h: 100 }];
+  const view = { tx: 0, ty: 0, scale: 0.25 }; // 500 px viewport shows world x 0..2000
+  assert.equal(nearbyBoards(boards, view, { w: 500, h: 500 }, 0).size, 0);
+  assert.equal(nearbyBoards(boards, view, { w: 500, h: 500 }, 100).size, 1); // 100 px = 400 world px
 });

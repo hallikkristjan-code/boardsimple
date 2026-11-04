@@ -43,6 +43,7 @@ Server kuulab ainult `127.0.0.1` ja keeldub võõra `Origin`/`Host` päisega pä
 ```sh
 npm test                      # node-testid
 python -I test/e2e/e2e.py     # brauseri e2e (pip install playwright && playwright install chromium)
+python -I test/e2e/load.py    # 146 lehe koormusproov; LOUEND_E2E_GPU=1 lisab Windowsil GPU mälu piiri
 ```
 
-CI jooksutab mõlemad (node-testid Ubuntul ja Windowsil, e2e Ubuntul).
+CI jooksutab kõik (node-testid Ubuntul ja Windowsil, e2e ja koormusproov Ubuntul). GPU piiri CI ei kontrolli, sest seal pole päris GPU-d.
