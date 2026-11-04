@@ -243,6 +243,20 @@ try:
         pg2.goto(url)
         pg2.wait_for_selector("#conn:visible", timeout=5000)
         check("permanent failure asks for a page refresh", "värskenda" in pg2.locator("#conn").inner_text())
+
+        # 10. Theme toggle: follows the system until clicked, then remembers the choice before paint.
+        pg3 = b.new_page(color_scheme="light")
+        pg3.goto(url)
+        pg3.wait_for_selector("#theme")
+        scheme = lambda: pg3.evaluate("getComputedStyle(document.documentElement).colorScheme")
+        check("theme follows the system by default", scheme() == "light dark")
+        pg3.click("#theme")
+        check("theme toggle switches to dark", scheme() == "dark")
+        pg3.reload()
+        check("theme remembered before first paint",
+              pg3.evaluate("document.documentElement.dataset.theme") == "dark" and scheme() == "dark")
+        pg3.click("#theme")
+        check("theme toggle switches back to light", scheme() == "light")
         b.close()
 finally:
     srv.terminate()
