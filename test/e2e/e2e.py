@@ -1,11 +1,11 @@
-"""Browser end-to-end checks for Louend.
+"""Browser end-to-end checks for BoardSimple.
 
 Starts the CLI on a copy of examples/demo and drives the canvas with Playwright.
 Covers what the node tests cannot: the annotation panel in a real browser,
 live (SSE) updates and iframe reloads.
 
 Run:  python -I test/e2e/e2e.py            (uses Playwright's bundled Chromium)
-      LOUEND_E2E_CHANNEL=msedge python -I test/e2e/e2e.py
+      BOARDSIMPLE_E2E_CHANNEL=msedge python -I test/e2e/e2e.py
 Needs: pip install playwright && playwright install chromium
 """
 import json
@@ -22,7 +22,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 repo = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
-work = Path(tempfile.mkdtemp(prefix="louend-e2e-"))
+work = Path(tempfile.mkdtemp(prefix="boardsimple-e2e-"))
 shutil.copytree(repo / "examples/demo/screens", work / "screens")
 asset = work / "screens/suunad/pilt.svg"
 asset.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')
@@ -30,7 +30,7 @@ asset.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>
 
 def start_server(port):
     proc = subprocess.Popen(
-        ["node", str(repo / "bin/louend.mjs"), str(work), "--port", str(port), "--no-open"],
+        ["node", str(repo / "bin/boardsimple.mjs"), str(work), "--port", str(port), "--no-open"],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
     )
     deadline = time.time() + 10
@@ -38,11 +38,11 @@ def start_server(port):
         line = proc.stdout.readline()
         if not line and proc.poll() is not None:
             break
-        m = re.search(r"Louend: (http://127\.0\.0\.1:\d+)", line)
+        m = re.search(r"BoardSimple: (http://127\.0\.0\.1:\d+)", line)
         if m:
             return proc, m.group(1) + "/"
     proc.terminate()
-    sys.exit("louend did not print its URL")
+    sys.exit("boardsimple did not print its URL")
 
 
 srv, url = start_server(0)
@@ -58,7 +58,7 @@ def check(name, cond):
 
 try:
     with sync_playwright() as p:
-        channel = os.environ.get("LOUEND_E2E_CHANNEL") or None
+        channel = os.environ.get("BOARDSIMPLE_E2E_CHANNEL") or None
         b = p.chromium.launch(channel=channel, args=["--enable-unsafe-swiftshader"])
         pg = b.new_page(viewport={"width": 1400, "height": 900})
         alerts = []

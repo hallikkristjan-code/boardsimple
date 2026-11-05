@@ -14,7 +14,7 @@ const input = () => ({
 });
 
 async function fresh() {
-  const root = await mkdtemp(join(tmpdir(), "louend-ann-"));
+  const root = await mkdtemp(join(tmpdir(), "boardsimple-ann-"));
   return { root, store: createStore(root) };
 }
 

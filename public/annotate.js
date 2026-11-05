@@ -302,7 +302,7 @@ function renderPanel() {
     const sepChar = getRoot().includes("\\") ? "\\" : "/";
     const path = `${getRoot()}${sepChar}.canvas${sepChar}annotations.json`;
     try {
-      await navigator.clipboard.writeText(`vaata märkused üle: ${path} (louend: ${location.origin})`);
+      await navigator.clipboard.writeText(`vaata märkused üle: ${path} (boardsimple: ${location.origin})`);
       say("Kopeeritud");
     } catch {
       say("Kopeerimine ei õnnestunud");

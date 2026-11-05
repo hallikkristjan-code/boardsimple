@@ -19,7 +19,7 @@ test("parseMeta returns nulls without meta", () => {
 });
 
 async function makeRoot(files) {
-  const root = await mkdtemp(join(tmpdir(), "louend-"));
+  const root = await mkdtemp(join(tmpdir(), "boardsimple-"));
   for (const [rel, body] of Object.entries(files)) {
     const p = join(root, rel);
     await mkdir(join(p, ".."), { recursive: true });

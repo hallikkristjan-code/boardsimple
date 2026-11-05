@@ -1,9 +1,9 @@
 {
-  "name": "louend",
+  "name": "boardsimple",
   "version": "0.1.0",
   "description": "Kohalik agendi-lõuend: HTML-ekraanid kõrvuti, ringiga märkused agendile",
   "type": "module",
-  "bin": { "louend": "bin/louend.mjs" },
+  "bin": { "boardsimple": "bin/boardsimple.mjs" },
   "scripts": { "test": "node --test" },
   "engines": { "node": ">=24" },
   "license": "UNLICENSED",
