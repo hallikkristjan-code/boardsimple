@@ -274,6 +274,14 @@ for (const b of document.querySelectorAll("#colors button")) {
   b.addEventListener("click", () => setColor(b.dataset.color));
 }
 document.getElementById("fit").addEventListener("click", fit);
+// Theme: no attribute = follow the system; a click picks the opposite of what is showing and remembers it.
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = getComputedStyle(document.documentElement).colorScheme === "dark" ||
+    (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
+  const next = dark ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem("louend-theme", next);
+});
 window.addEventListener("resize", () => setView(view));
 
 // --- live updates -------------------------------------------------------
