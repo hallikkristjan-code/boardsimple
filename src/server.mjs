@@ -279,8 +279,8 @@ export async function startServer({ root, port, appDir = APP_DIR }) {
       // EACCES: Windows reserves port ranges (Hyper-V/WSL/Docker) — treat like busy.
       if (!["EADDRINUSE", "EACCES"].includes(e.code)) throw e;
       if (p >= last) {
-        const err = new Error(`Vaba porti ei leitud vahemikus ${first}–${last}. Proovi: louend --port 5000`);
-        err.code = "ELOUEND_PORT";
+        const err = new Error(`Vaba porti ei leitud vahemikus ${first}–${last}. Proovi: boardsimple --port 5000`);
+        err.code = "EBOARDSIMPLE_PORT";
         throw err;
       }
     }

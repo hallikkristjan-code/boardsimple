@@ -1,7 +1,7 @@
 """Browser checks for the mark tools: box, line and arrow, with colours.
 
 Run:  python -I test/e2e/marks.py
-      LOUEND_E2E_CHANNEL=msedge python -I test/e2e/marks.py
+      BOARDSIMPLE_E2E_CHANNEL=msedge python -I test/e2e/marks.py
 """
 import json
 import os
@@ -14,7 +14,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 repo = Path(__file__).resolve().parents[2]
-work = Path(tempfile.mkdtemp(prefix="louend-marks-"))
+work = Path(tempfile.mkdtemp(prefix="boardsimple-marks-"))
 GREEN = "#2f8f5b"
 
 page = """<!doctype html><html lang="et"><head><meta charset="utf-8">
@@ -31,18 +31,18 @@ folder.mkdir(parents=True)
 (folder / "1.html").write_text(page, encoding="utf-8")
 
 srv = subprocess.Popen(
-    ["node", str(repo / "bin/louend.mjs"), str(work), "--port", "0", "--no-open"],
+    ["node", str(repo / "bin/boardsimple.mjs"), str(work), "--port", "0", "--no-open"],
     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
 )
 url = None
 for _ in range(50):
-    m = re.search(r"Louend: (http://127\.0\.0\.1:\d+)", srv.stdout.readline())
+    m = re.search(r"BoardSimple: (http://127\.0\.0\.1:\d+)", srv.stdout.readline())
     if m:
         url = m.group(1) + "/"
         break
 if not url:
     srv.terminate()
-    sys.exit("louend did not print its URL")
+    sys.exit("boardsimple did not print its URL")
 
 ok = True
 
@@ -92,7 +92,7 @@ def ids(note):
 
 try:
     with sync_playwright() as p:
-        channel = os.environ.get("LOUEND_E2E_CHANNEL") or None
+        channel = os.environ.get("BOARDSIMPLE_E2E_CHANNEL") or None
         b = p.chromium.launch(channel=channel)
         ctx = b.new_context(viewport={"width": 1400, "height": 900})
         pg = ctx.new_page()

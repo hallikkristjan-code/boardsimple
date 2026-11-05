@@ -6,7 +6,7 @@ import { spawn } from "node:child_process";
 import { startServer } from "../src/server.mjs";
 import { openCommand } from "../src/browser.mjs";
 
-const USAGE = `Kasutus: louend [kaust] [--port N] [--no-open]
+const USAGE = `Kasutus: boardsimple [kaust] [--port N] [--no-open]
 
 Avab lõuendi eraldi aknas (Chrome/Edge/Chromium --app); kui ühtki pole, tavabrauseris.
 
@@ -52,11 +52,11 @@ let server;
 try {
   server = await startServer({ root, port });
 } catch (e) {
-  if (e.code !== "ELOUEND_PORT") throw e;
+  if (e.code !== "EBOARDSIMPLE_PORT") throw e;
   console.error(e.message);
   process.exit(1);
 }
-console.log(`Louend: ${server.url}  (kaust: ${root})`);
+console.log(`BoardSimple: ${server.url}  (kaust: ${root})`);
 console.log("Peatamiseks vajuta Ctrl+C.");
 
 if (!args.values["no-open"]) {

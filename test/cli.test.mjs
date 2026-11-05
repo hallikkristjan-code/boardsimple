@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
-const bin = join(repo, "bin", "louend.mjs");
+const bin = join(repo, "bin", "boardsimple.mjs");
 
-test("louend starts on a folder and serves its screens", async () => {
+test("boardsimple starts on a folder and serves its screens", async () => {
   const child = spawn(process.execPath, [bin, join(repo, "examples", "demo"), "--no-open", "--port", "0"]);
   try {
     const url = await new Promise((resolve, reject) => {
@@ -15,7 +15,7 @@ test("louend starts on a folder and serves its screens", async () => {
       const timer = setTimeout(() => reject(new Error(`no URL in: ${out}`)), 5000);
       child.stdout.on("data", (d) => {
         out += d;
-        const m = out.match(/Louend: (http:\/\/127\.0\.0\.1:\d+)/);
+        const m = out.match(/BoardSimple: (http:\/\/127\.0\.0\.1:\d+)/);
         if (m) { clearTimeout(timer); resolve(m[1]); }
       });
       child.on("exit", (code) => reject(new Error(`exited ${code}: ${out}`)));
@@ -27,7 +27,7 @@ test("louend starts on a folder and serves its screens", async () => {
   }
 });
 
-test("louend exits 1 for a missing folder", async () => {
+test("boardsimple exits 1 for a missing folder", async () => {
   let err = "";
   const code = await new Promise((resolve) => {
     const child = spawn(process.execPath, [bin, join(repo, "pole-olemas"), "--no-open"]);
@@ -38,7 +38,7 @@ test("louend exits 1 for a missing folder", async () => {
   assert.match(err, /Kausta ei leitud/);
 });
 
-test("louend prints a friendly error when no port is free", async (t) => {
+test("boardsimple prints a friendly error when no port is free", async (t) => {
   const net = await import("node:net");
   const blocker = net.createServer();
   const ok = await new Promise((r) => {

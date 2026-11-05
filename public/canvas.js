@@ -1,7 +1,7 @@
 import { layoutBoards, zoomAt, fitAll, screenToWorld, labelMode, nearbyBoards } from "./geometry.js";
 
 const AUTO_FALLBACK_H = 900;
-const COLOR_KEY = "louend-color";
+const COLOR_KEY = "boardsimple-color";
 export const MARK_TOOLS = { ring: "ring", kast: "box", joon: "line", nool: "arrow" }; // tool -> note shape
 // Screen px around the viewport. The gap stops pages reloading on small back-and-forth pans.
 const LOAD_MARGIN = 600;
@@ -202,7 +202,7 @@ async function loadScreens() {
   const data = await res.json();
   root = data.root;
   document.getElementById("project").textContent = root.split(/[\\/]/).filter(Boolean).pop() ?? root;
-  document.title = `Louend — ${document.getElementById("project").textContent}`;
+  document.title = `BoardSimple — ${document.getElementById("project").textContent}`;
   document.getElementById("count").textContent = `${data.screens.length} ekraani`;
   syncBoards(data.screens);
   if (!fittedOnce && data.screens.length) {
@@ -280,7 +280,7 @@ document.getElementById("theme").addEventListener("click", () => {
     (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
   const next = dark ? "light" : "dark";
   document.documentElement.dataset.theme = next;
-  localStorage.setItem("louend-theme", next);
+  localStorage.setItem("boardsimple-theme", next);
 });
 window.addEventListener("resize", () => setView(view));
 
@@ -290,7 +290,7 @@ events.addEventListener("screens", () => loadScreens().catch(console.error));
 events.addEventListener("error", () => {
   // The browser retries network errors by itself, but gives up for good on a bad response.
   connEl.textContent = events.readyState === EventSource.CLOSED
-    ? "Ühendus katkes. Käivita louend ja värskenda lehte."
+    ? "Ühendus katkes. Käivita boardsimple ja värskenda lehte."
     : "Ühendus katkes, vaade võib olla vana. Proovin uuesti…";
   connEl.hidden = false;
 });

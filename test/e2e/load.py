@@ -1,14 +1,14 @@
-"""Load check for Louend: a book-sized project (146 pages in 18 rows).
+"""Load check for BoardSimple: a book-sized project (146 pages in 18 rows).
 
 Headless part runs everywhere. It checks that far pages are unloaded when zoomed in,
 that they come back, and that a note survives its page being unloaded.
 
 GPU part needs a real GPU and Windows perf counters, so it only runs on request:
-      LOUEND_E2E_GPU=1 python -I test/e2e/load.py
+      BOARDSIMPLE_E2E_GPU=1 python -I test/e2e/load.py
 It opens a visible Chrome window behind your other windows for about 30 s.
 
 Run:  python -I test/e2e/load.py
-      LOUEND_E2E_CHANNEL=msedge python -I test/e2e/load.py
+      BOARDSIMPLE_E2E_CHANNEL=msedge python -I test/e2e/load.py
 """
 import json
 import os
@@ -26,7 +26,7 @@ ROWS = 18
 GPU_PEAK_LIMIT_MB = 400  # 1222 MB with the world layer pinned, 173 MB without
 
 repo = Path(__file__).resolve().parents[2]
-work = Path(tempfile.mkdtemp(prefix="louend-load-"))
+work = Path(tempfile.mkdtemp(prefix="boardsimple-load-"))
 
 
 def write_pages():
@@ -47,15 +47,15 @@ def write_pages():
 
 def start_server():
     proc = subprocess.Popen(
-        ["node", str(repo / "bin/louend.mjs"), str(work), "--port", "0", "--no-open"],
+        ["node", str(repo / "bin/boardsimple.mjs"), str(work), "--port", "0", "--no-open"],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
     )
     for _ in range(50):
-        m = re.search(r"Louend: (http://127\.0\.0\.1:\d+)", proc.stdout.readline())
+        m = re.search(r"BoardSimple: (http://127\.0\.0\.1:\d+)", proc.stdout.readline())
         if m:
             return proc, m.group(1) + "/"
     proc.terminate()
-    sys.exit("louend did not print its URL")
+    sys.exit("boardsimple did not print its URL")
 
 
 ok = True
@@ -123,7 +123,7 @@ def loaded_heading(pg, title):
 
 
 def headless_checks(p):
-    channel = os.environ.get("LOUEND_E2E_CHANNEL") or None
+    channel = os.environ.get("BOARDSIMPLE_E2E_CHANNEL") or None
     b = p.chromium.launch(channel=channel)
     pg = b.new_page(viewport={"width": 1400, "height": 900})
     errors = []
@@ -194,7 +194,7 @@ $c = (Get-Counter "\GPU Process Memory(pid_$($g.ProcessId)_*)\*" -ea 0).CounterS
 
 
 def gpu_check(p):
-    profile = tempfile.mkdtemp(prefix="louend-load-profile-")
+    profile = tempfile.mkdtemp(prefix="boardsimple-load-profile-")
     ctx = p.chromium.launch_persistent_context(
         profile, channel="chrome", headless=False, no_viewport=True,
         # Windows stops drawing a covered window; the run must not take the user's focus.
@@ -239,13 +239,13 @@ srv, url = start_server()
 try:
     with sync_playwright() as p:
         headless_checks(p)
-        if os.environ.get("LOUEND_E2E_GPU"):
+        if os.environ.get("BOARDSIMPLE_E2E_GPU"):
             if sys.platform == "win32":
                 gpu_check(p)
             else:
                 print("SKIP GPU check: Windows only")
         else:
-            print("SKIP GPU check: set LOUEND_E2E_GPU=1")
+            print("SKIP GPU check: set BOARDSIMPLE_E2E_GPU=1")
 finally:
     srv.terminate()
 

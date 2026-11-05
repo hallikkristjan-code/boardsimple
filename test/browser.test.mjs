@@ -36,7 +36,7 @@ test("openCommand falls back to the system opener without a Chromium browser", (
 });
 
 test("openCommand gives the app window its own profile and a size on first launch only", () => {
-  const profile = join(PF, "..", "Users", "k", ".louend", "chrome-profile");
+  const profile = join(PF, "..", "Users", "k", ".boardsimple", "chrome-profile");
   const fresh = openCommand("http://x", { platform: "win32", env: winEnv, exists: (p) => p === chrome, profileDir: profile })[1];
   assert.ok(fresh.includes(`--user-data-dir=${profile}`));
   assert.ok(fresh.some((a) => a.startsWith("--window-size=")));

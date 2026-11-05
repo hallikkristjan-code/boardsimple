@@ -33,7 +33,7 @@ export function findAppBrowser({ platform = process.platform, env = process.env,
   return candidates(platform, env).find((p) => exists(p)) ?? null;
 }
 
-export const DEFAULT_PROFILE_DIR = join(homedir(), ".louend", "chrome-profile");
+export const DEFAULT_PROFILE_DIR = join(homedir(), ".boardsimple", "chrome-profile");
 
 // Own profile: the window is independent of the user's running browser
 // (always its own process and taskbar entry) and remembers its own size and

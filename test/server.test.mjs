@@ -7,7 +7,7 @@ import net from "node:net";
 import http from "node:http";
 import { startServer } from "../src/server.mjs";
 
-const root = await mkdtemp(join(tmpdir(), "louend-srv-"));
+const root = await mkdtemp(join(tmpdir(), "boardsimple-srv-"));
 await mkdir(join(root, "screens", "õhtu menüü"), { recursive: true });
 await writeFile(join(root, "screens", "õhtu menüü", "1.html"), "<title>Üks</title><p>tere</p>");
 await writeFile(join(root, "secret.txt"), "salajane");
@@ -189,7 +189,7 @@ test("busy last port gives a friendly error instead of a bad-port crash", async 
   if (!ok) return t.skip("port 65535 not available for the test");
   try {
     await assert.rejects(startServer({ root, port: 65535 }), (e) => {
-      assert.equal(e.code, "ELOUEND_PORT");
+      assert.equal(e.code, "EBOARDSIMPLE_PORT");
       assert.match(e.message, /Vaba porti ei leitud/);
       return true;
     });

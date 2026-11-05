@@ -1,6 +1,6 @@
-# Louend — juhend agendile
+# BoardSimple — juhend agendile
 
-Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasutatakse louendit.
+Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasutatakse boardsimple'it.
 
 ## Ekraanid
 
@@ -14,7 +14,7 @@ Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasuta
 - Hoia fail iseseisev: CSS `<style>`-is, pildid suhteliste teedega samas kaustas.
   Väliseid skripte (CDN) lõuend ei lae — kasuta inline `<script>`-i; välised fondid,
   stiilid ja pildid on lubatud.
-- Lõuend uueneb ise, kui faili salvestad. Kasutaja käivitab selle: `louend` projekti kaustas.
+- Lõuend uueneb ise, kui faili salvestad. Kasutaja käivitab selle: `boardsimple` projekti kaustas.
 
 ## Märkused ("vaata märkused üle")
 
@@ -34,14 +34,14 @@ Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasuta
 4. Muuda HTML-faili. Ära loo uut faili, kui märkus ei palu varianti.
 5. Pärast muudatust märgi märkus tehtuks **ühekaupa**, et kasutaja vahepeal lisatud
    märkused ei kaoks:
-   - kui louend töötab, **ainult API kaudu** — server kirjutab sama faili ja otsene
+   - kui boardsimple töötab, **ainult API kaudu** — server kirjutab sama faili ja otsene
      edit võib temaga kokku põrgata. `<URL>` on kasutaja kopeeritud käsus
-     (`louend: http://127.0.0.1:...`) ja louendi käivitusreal; port võib olla iga kord erinev:
+     (`boardsimple: http://127.0.0.1:...`) ja boardsimple'i käivitusreal; port võib olla iga kord erinev:
      `curl -X PATCH <URL>/api/annotations/<id> -H "content-type: application/json" -d "{\"status\":\"done\"}"`
    - kui URL-i pole teada, proovi porte 4477–4487: õige server on see, mille
      `GET <URL>/api/screens` vastuse `root` on see projekt. 404 märkuse peale tähendab
      teise projekti serverit, mitte luba faili muuta.
-   - kui louend ei tööta (ükski port ei vasta), muuda failis sihitud editiga ainult
+   - kui boardsimple ei tööta (ükski port ei vasta), muuda failis sihitud editiga ainult
      selle märkuse `status` → `"done"` ja `updatedAt` → praegune ISO-aeg.
      **Ära kirjuta kogu faili üle** ega kustuta märkusi.
 6. Kui märkus on ebaselge, jäta see `"open"`-iks ja küsi kasutajalt.
