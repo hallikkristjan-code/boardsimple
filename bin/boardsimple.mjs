@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { stat } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { startServer } from "../src/server.mjs";
-import { openCommand } from "../src/browser.mjs";
+import { findAppBrowser, openCommand } from "../src/browser.mjs";
 
 const MESSAGES = {
   et: {
@@ -75,9 +75,19 @@ if (port !== undefined && !(Number.isInteger(port) && port >= 0 && port < 65536)
   process.exit(1);
 }
 
+const openWindow = (url) => {
+  const [cmd, cmdArgs] = openCommand(url);
+  spawn(cmd, cmdArgs, { stdio: "ignore", detached: true }).on("error", () => {
+    console.log(T.openByHand, url);
+  }).unref();
+};
+
 let server;
 try {
-  server = await startServer({ root, port });
+  // Without an app browser the fallback is a plain tab, so a link clicked in a
+  // tab has nothing better to hand over to.
+  const canHandOver = !args.values["no-open"] && findAppBrowser();
+  server = await startServer({ root, port, openWindow: canHandOver ? openWindow : undefined });
 } catch (e) {
   if (e.code !== "EBOARDSIMPLE_PORT") throw e;
   console.error(T.noFreePort(e));
@@ -86,12 +96,7 @@ try {
 console.log(`BoardSimple: ${server.url}  ${T.started(root)}`);
 console.log(T.stop);
 
-if (!args.values["no-open"]) {
-  const [cmd, cmdArgs] = openCommand(server.url);
-  spawn(cmd, cmdArgs, { stdio: "ignore", detached: true }).on("error", () => {
-    console.log(T.openByHand, server.url);
-  }).unref();
-}
+if (!args.values["no-open"]) openWindow(server.url);
 
 const stop = async () => {
   await server.close();

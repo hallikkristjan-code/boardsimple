@@ -11,6 +11,7 @@ const PORT_TRIES = 11; // 4477..4487
 const MAX_BODY = 1024 * 1024;
 const DEBOUNCE_MS = 100;
 const PING_MS = 25_000;
+const OPEN_WINDOW_COOLDOWN_MS = 3000; // a page stuck in a reopen loop must not flood the desktop
 // Screens share the canvas origin (needed for the element hit-test); block remote
 // code so a CDN script in a screen cannot drive the annotations API.
 // Remote fonts, styles and images stay allowed (common in mockups); scripts do not.
@@ -180,7 +181,7 @@ function listen(server, port) {
   });
 }
 
-export async function startServer({ root, port, appDir = APP_DIR }) {
+export async function startServer({ root, port, appDir = APP_DIR, openWindow }) {
   root = resolve(root);
   const screensDir = join(root, "screens");
   const canvasDir = join(root, ".canvas");
@@ -188,6 +189,7 @@ export async function startServer({ root, port, appDir = APP_DIR }) {
   const store = createStore(root);
   const clients = new Set();
   let actualPort = 0;
+  let lastOpenWindow = -Infinity;
 
   const broadcast = (event) => {
     for (const res of clients) res.write(`event: ${event}\ndata: {}\n\n`);
@@ -235,6 +237,14 @@ export async function startServer({ root, port, appDir = APP_DIR }) {
     }
     if (rawPath === "/api/client-log" && req.method === "POST") {
       await appendFile(join(canvasDir, "client.log"), logLine(await readJson(req)));
+      res.writeHead(204);
+      return res.end();
+    }
+    if (rawPath === "/api/open-window" && req.method === "POST" && openWindow) {
+      const now = Date.now();
+      if (now - lastOpenWindow < OPEN_WINDOW_COOLDOWN_MS) throw new HttpError(429, "window just opened");
+      lastOpenWindow = now;
+      openWindow(`http://127.0.0.1:${actualPort}`);
       res.writeHead(204);
       return res.end();
     }
