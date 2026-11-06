@@ -19,22 +19,28 @@ Paperiga seotud.
 
 ## Paigaldus
 
-Vajab Node.js 24+ ja Giti. Npm-sõltuvusi pole.
+Vajab Node.js 24+. Npm-sõltuvusi pole.
+
+```sh
+npm install -g boardsimple
+```
+
+Või käivita üks kord ilma paigaldamata, oma projekti kaustas:
+
+```sh
+npx boardsimple
+```
+
+Hoia terminal tahvli kasutamise ajal töös; serveri peatamiseks vajuta Ctrl+C.
+Kui PowerShell blokeerib npm-skriptid, kasuta Windowsis `npm.cmd`, `npx.cmd` ja `boardsimple.cmd`.
+
+Demo on selles repos. Selle proovimiseks on vaja ka Giti:
 
 ```sh
 git clone https://github.com/hallikkristjan-code/boardsimple.git
 cd boardsimple
-npm link
-```
-
-Proovi samast kaustast kaasasolevat demot:
-
-```sh
 boardsimple examples/demo
 ```
-
-Hoia terminal tahvli kasutamise ajal töös; serveri peatamiseks vajuta Ctrl+C.
-Kui PowerShell blokeerib npm-skriptid, kasuta Windowsis `npm.cmd link` ja `boardsimple.cmd`.
 
 ## Anna agendile tagasisidet
 
@@ -62,7 +68,7 @@ Alt+Tab-is nähtav, tabide vahele ei kao. Aknal on oma profiil (`~/.boardsimple/
 asukoht jäävad meelde. Mujalt klikitud lõuendi link jõuab tavatabi, mis annab töö sellele aknale üle ja sulgeb end.
 Kui ühtki neist pole, avaneb tavabrauseris.
 
-Proovi demoga: `boardsimple examples/demo` (inglise keeles `examples/demo-en`).
+Proovi repo kloonis demoga: `boardsimple examples/demo` (inglise keeles `examples/demo-en`).
 
 - **Ekraanid:** `screens/<rühm>/<nimi>.html`, suurus `<meta name="artboard" content="width=390,height=844">`.
 - **Tööriistad:** Vali (V) — klõpsa ja keri ekraani sees · Käsi (H või tühik) — nihuta · Ring (O), Kast (B), Joon (P), Nool (A) — märgi. Joon sulgub, kui lõpetad alguse lähedal; muidu jääb allakriipsutuseks. Värv kehtib järgmistele märkidele.
