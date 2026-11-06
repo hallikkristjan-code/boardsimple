@@ -5,13 +5,13 @@ html { color-scheme: light dark; }
 html[data-theme="light"] { color-scheme: light; }
 html[data-theme="dark"] { color-scheme: dark; }
 :root {
-  --paper: light-dark(oklch(95.8% 0.003 250), oklch(28% 0.008 260));
-  --paper-dot: light-dark(oklch(86% 0.005 250), oklch(37% 0.008 260));
+  --paper: light-dark(oklch(94% 0.012 245), oklch(28% 0.008 260));
+  --paper-dot: light-dark(oklch(84% 0.015 245), oklch(37% 0.008 260));
   --surface: light-dark(oklch(100% 0 0), oklch(32% 0.008 260));
-  --surface-2: light-dark(oklch(95% 0.004 250), oklch(37% 0.008 260));
+  --surface-2: light-dark(oklch(95% 0.01 245), oklch(37% 0.008 260));
   --ink: light-dark(oklch(23% 0.012 260), oklch(93% 0.006 260));
   --ink-2: light-dark(oklch(46% 0.012 260), oklch(78% 0.008 260));
-  --ink-3: light-dark(oklch(60% 0.01 260), oklch(71% 0.008 260));
+  --ink-3: light-dark(oklch(52% 0.012 260), oklch(71% 0.008 260));
   --hairline: light-dark(oklch(23% 0.012 260 / 0.1), oklch(93% 0.006 260 / 0.12));
   --edge: light-dark(oklch(23% 0.012 260 / 0.14), oklch(93% 0.006 260 / 0.14));
   --accent: light-dark(oklch(58% 0.22 350), oklch(73% 0.17 350));
