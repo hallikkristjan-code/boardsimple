@@ -1,12 +1,12 @@
-/* Hallmark · macrostructure: Workbench · tone: utilitarian tool · anchor hue: magenta (app icon) · paper: cool neutral · type: system sans + mono numerals, no serif, no web fonts
+/* Hallmark · macrostructure: Workbench · tone: utilitarian tool · anchor hue: magenta (app icon) · canvas: cool neutral · type: system sans + mono numerals, no serif, no web fonts
  * pre-emit critique: P4 H4 E4 S4 R5 V4
  */
 html { color-scheme: light dark; }
 html[data-theme="light"] { color-scheme: light; }
 html[data-theme="dark"] { color-scheme: dark; }
 :root {
-  --paper: light-dark(oklch(94% 0.012 245), oklch(28% 0.008 260));
-  --paper-dot: light-dark(oklch(84% 0.015 245), oklch(37% 0.008 260));
+  --canvas: light-dark(oklch(94% 0.012 245), oklch(28% 0.008 260));
+  --canvas-dot: light-dark(oklch(84% 0.015 245), oklch(37% 0.008 260));
   --surface: light-dark(oklch(100% 0 0), oklch(32% 0.008 260));
   --surface-2: light-dark(oklch(95% 0.01 245), oklch(37% 0.008 260));
   --ink: light-dark(oklch(23% 0.012 260), oklch(93% 0.006 260));
@@ -35,7 +35,7 @@ html[data-theme="dark"] { color-scheme: dark; }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; }
-body { background: var(--paper); }
+body { background: var(--canvas); }
 button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; transition: transform 0.12s var(--ease-out), color 0.12s, background-color 0.12s; }
 button:active { transform: scale(0.96); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -72,8 +72,8 @@ html[data-theme="dark"] #theme .moon { display: block; }
 #colors button[aria-pressed="true"]::before { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--c); }
 
 #viewport { position: fixed; inset: 0; overflow: hidden; touch-action: none;
-  background-color: var(--paper);
-  background-image: radial-gradient(circle, var(--paper-dot) 1px, transparent 1px);
+  background-color: var(--canvas);
+  background-image: radial-gradient(circle, var(--canvas-dot) 1px, transparent 1px);
   background-size: 24px 24px; }
 .tool-kasi #viewport, .panning #viewport { cursor: grab; }
 .panning.dragging #viewport { cursor: grabbing; }
