@@ -17,39 +17,40 @@
     </div>
     <span id="conn" role="status" hidden></span>
     <div id="view" class="island">
-      <button id="fit" type="button">Mahuta kõik</button>
+      <button id="fit" type="button" data-i18n="fit"></button>
       <span id="zoom">100%</span>
-      <button id="theme" type="button" title="Hele / tume" aria-label="Hele või tume režiim">
+      <button id="theme" type="button" data-i18n-title="themeTitle" data-i18n-aria="themeLabel">
         <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6l1.4 1.4m10 10l1.4 1.4M5.6 18.4l1.4-1.4m10-10l1.4-1.4"/></svg>
         <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>
       </button>
+      <button id="lang" type="button" data-i18n="switchTo" data-i18n-title="switchToTitle"></button>
     </div>
   </header>
-  <nav id="tools" class="island" aria-label="Tööriistad">
-    <button type="button" data-tool="vali" title="Vali — klõpsa ja keri ekraani sees (V)" aria-label="Vali">
+  <nav id="tools" class="island" data-i18n-aria="tools">
+    <button type="button" data-tool="vali" data-i18n-title="toolSelectTitle" data-i18n-aria="toolSelect">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l14 8-6 1.5L10 19z"/></svg>
     </button>
-    <button type="button" data-tool="kasi" title="Käsi — nihuta lõuendit (H, või hoia tühikut)" aria-label="Käsi">
+    <button type="button" data-tool="kasi" data-i18n-title="toolHandTitle" data-i18n-aria="toolHand">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 013 0V12m0-7.5a1.5 1.5 0 013 0V12m0-6a1.5 1.5 0 013 0V15a6 6 0 01-6 6h-1a6 6 0 01-5-2.7L3.5 14a1.5 1.5 0 012.5-1.6L8 15"/></svg>
     </button>
-    <button type="button" data-tool="ring" title="Ring — märgi, mida muuta (O)" aria-label="Ring">
+    <button type="button" data-tool="ring" data-i18n-title="toolRingTitle" data-i18n-aria="toolRing">
       <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="8.5" ry="6.5"/></svg>
     </button>
-    <button type="button" data-tool="kast" title="Kast — too blokk täpselt esile (B)" aria-label="Kast">
+    <button type="button" data-tool="kast" data-i18n-title="toolBoxTitle" data-i18n-aria="toolBox">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>
     </button>
-    <button type="button" data-tool="joon" title="Joon — tõmba koha ümber või alla (P)" aria-label="Joon">
+    <button type="button" data-tool="joon" data-i18n-title="toolLineTitle" data-i18n-aria="toolLine">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16c3-9 6-9 8-4s5 5 8-4"/></svg>
     </button>
-    <button type="button" data-tool="nool" title="Nool — osuta kohale (A)" aria-label="Nool">
+    <button type="button" data-tool="nool" data-i18n-title="toolArrowTitle" data-i18n-aria="toolArrow">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19L19 5M10 5h9v9"/></svg>
     </button>
-    <div id="colors" role="group" aria-label="Märgi värv">
-      <button type="button" data-color="#e0383e" style="--c:#e0383e" title="Punane" aria-label="Punane"></button>
-      <button type="button" data-color="#c9741f" style="--c:#c9741f" title="Oranž" aria-label="Oranž"></button>
-      <button type="button" data-color="#2f8f5b" style="--c:#2f8f5b" title="Roheline" aria-label="Roheline"></button>
-      <button type="button" data-color="#2f6fc4" style="--c:#2f6fc4" title="Sinine" aria-label="Sinine"></button>
-      <button type="button" data-color="#7a55c7" style="--c:#7a55c7" title="Lilla" aria-label="Lilla"></button>
+    <div id="colors" role="group" data-i18n-aria="markColor">
+      <button type="button" data-color="#e0383e" style="--c:#e0383e" data-i18n-title="red" data-i18n-aria="red"></button>
+      <button type="button" data-color="#c9741f" style="--c:#c9741f" data-i18n-title="orange" data-i18n-aria="orange"></button>
+      <button type="button" data-color="#2f8f5b" style="--c:#2f8f5b" data-i18n-title="green" data-i18n-aria="green"></button>
+      <button type="button" data-color="#2f6fc4" style="--c:#2f6fc4" data-i18n-title="blue" data-i18n-aria="blue"></button>
+      <button type="button" data-color="#7a55c7" style="--c:#7a55c7" data-i18n-title="purple" data-i18n-aria="purple"></button>
     </div>
   </nav>
   <main id="viewport">
@@ -57,9 +58,9 @@
       <div id="boards"></div>
       <svg id="overlay" width="1" height="1"></svg>
     </div>
-    <p id="empty" hidden>Ekraane pole. Kirjuta HTML-failid kausta <code>screens/</code> (nt <code>screens/suunad/a.html</code>).</p>
+    <p id="empty" data-i18n-html="noScreens" hidden></p>
   </main>
-  <aside id="panel" class="island" aria-label="Märkused"></aside>
+  <aside id="panel" class="island" data-i18n-aria="notes"></aside>
   <script type="module" src="/app/canvas.js"></script>
   <script type="module" src="/app/annotate.js"></script>
 </body>

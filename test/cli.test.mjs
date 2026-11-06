@@ -27,15 +27,29 @@ test("boardsimple starts on a folder and serves its screens", async () => {
   }
 });
 
-test("boardsimple exits 1 for a missing folder", async () => {
-  let err = "";
-  const code = await new Promise((resolve) => {
-    const child = spawn(process.execPath, [bin, join(repo, "pole-olemas"), "--no-open"]);
-    child.stderr.on("data", (d) => { err += d; });
+for (const [lang, message] of [["et", /Kausta ei leitud/], ["en", /Folder not found/]]) {
+  test(`boardsimple exits 1 for a missing folder (${lang})`, async () => {
+    let err = "";
+    const code = await new Promise((resolve) => {
+      const child = spawn(process.execPath, [bin, join(repo, "pole-olemas"), "--no-open"], {
+        env: { ...process.env, BOARDSIMPLE_LANG: lang },
+      });
+      child.stderr.on("data", (d) => { err += d; });
+      child.on("exit", resolve);
+    });
+    assert.equal(code, 1);
+    assert.match(err, message);
+  });
+}
+
+test("boardsimple --help is translated", async () => {
+  let out = "";
+  await new Promise((resolve) => {
+    const child = spawn(process.execPath, [bin, "--help"], { env: { ...process.env, BOARDSIMPLE_LANG: "en" } });
+    child.stdout.on("data", (d) => { out += d; });
     child.on("exit", resolve);
   });
-  assert.equal(code, 1);
-  assert.match(err, /Kausta ei leitud/);
+  assert.match(out, /^Usage: boardsimple/);
 });
 
 test("boardsimple prints a friendly error when no port is free", async (t) => {
@@ -48,12 +62,14 @@ test("boardsimple prints a friendly error when no port is free", async (t) => {
   if (!ok) return t.skip("port 65535 in use by a parallel test");
   let err = "";
   const code = await new Promise((resolve) => {
-    const child = spawn(process.execPath, [bin, join(repo, "examples", "demo"), "--no-open", "--port", "65535"]);
+    const child = spawn(process.execPath, [bin, join(repo, "examples", "demo"), "--no-open", "--port", "65535"], {
+      env: { ...process.env, BOARDSIMPLE_LANG: "en" },
+    });
     child.stderr.on("data", (d) => { err += d; });
     child.on("exit", resolve);
   });
   blocker.close();
   assert.equal(code, 1);
-  assert.match(err, /Vaba porti ei leitud/);
+  assert.match(err, /No free port between 65535 and 65535/);
   assert.doesNotMatch(err, /at .*server\.mjs/);
 });

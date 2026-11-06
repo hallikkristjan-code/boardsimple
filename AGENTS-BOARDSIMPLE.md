@@ -19,7 +19,7 @@ Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasuta
   terminali avada. See käsk jätab serveri sessioonist sõltumatult tööle:
   `powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath cmd.exe -ArgumentList '/c','boardsimple'"`
 
-## Märkused ("vaata märkused üle")
+## Märkused ("vaata märkused üle" / "review the notes")
 
 1. Loe `.canvas/annotations.json`. Tööta ainult märkustega, mille `status` on `"open"`.
 2. Iga märkus: `file` (milline ekraan), `text` (mida kasutaja tahab), `box` (märgi

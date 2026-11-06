@@ -190,7 +190,8 @@ test("busy last port gives a friendly error instead of a bad-port crash", async 
   try {
     await assert.rejects(startServer({ root, port: 65535 }), (e) => {
       assert.equal(e.code, "EBOARDSIMPLE_PORT");
-      assert.match(e.message, /Vaba porti ei leitud/);
+      assert.match(e.message, /no free port/);
+      assert.equal(e.first, 65535);
       return true;
     });
   } finally {

@@ -279,8 +279,10 @@ export async function startServer({ root, port, appDir = APP_DIR }) {
       // EACCES: Windows reserves port ranges (Hyper-V/WSL/Docker) — treat like busy.
       if (!["EADDRINUSE", "EACCES"].includes(e.code)) throw e;
       if (p >= last) {
-        const err = new Error(`Vaba porti ei leitud vahemikus ${first}–${last}. Proovi: boardsimple --port 5000`);
+        const err = new Error(`no free port between ${first} and ${last}`);
         err.code = "EBOARDSIMPLE_PORT";
+        err.first = first;
+        err.last = last;
         throw err;
       }
     }

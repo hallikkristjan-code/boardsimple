@@ -60,7 +60,7 @@ try:
     with sync_playwright() as p:
         channel = os.environ.get("BOARDSIMPLE_E2E_CHANNEL") or None
         b = p.chromium.launch(channel=channel, args=["--enable-unsafe-swiftshader"])
-        pg = b.new_page(viewport={"width": 1400, "height": 900})
+        pg = b.new_page(viewport={"width": 1400, "height": 900}, locale="et-EE")
         alerts = []
         pg.on("dialog", lambda d: (alerts.append(d.message), d.accept()))
         pg.goto(url)
@@ -238,14 +238,14 @@ try:
               "muudetud katkestuse ajal" in pg.locator(f'.note-row[data-note="{first_id}"] .txt').inner_text())
 
         # 9. EventSource gives up for good on a bad response; do not promise a retry then.
-        pg2 = b.new_page()
+        pg2 = b.new_page(locale="et-EE")
         pg2.route("**/api/events", lambda r: r.fulfill(status=503, body="x"))
         pg2.goto(url)
         pg2.wait_for_selector("#conn:visible", timeout=5000)
         check("permanent failure asks for a page refresh", "värskenda" in pg2.locator("#conn").inner_text())
 
         # 10. Theme toggle: follows the system until clicked, then remembers the choice before paint.
-        pg3 = b.new_page(color_scheme="light")
+        pg3 = b.new_page(color_scheme="light", locale="et-EE")
         pg3.goto(url)
         pg3.wait_for_selector("#theme")
         scheme = lambda: pg3.evaluate("getComputedStyle(document.documentElement).colorScheme")
@@ -257,6 +257,37 @@ try:
               pg3.evaluate("document.documentElement.dataset.theme") == "dark" and scheme() == "dark")
         pg3.click("#theme")
         check("theme toggle switches back to light", scheme() == "light")
+
+        # 11. Language: follows the browser until clicked, then remembers the choice.
+        pg4 = b.new_page(viewport={"width": 1400, "height": 900}, locale="en-US")
+        pg4.goto(url)
+        pg4.wait_for_selector(".board iframe")
+        fit_text = lambda: pg4.locator("#fit").inner_text()
+        check("English browser gets English", fit_text() == "Fit all")
+        check("document language follows", pg4.evaluate("document.documentElement.lang") == "en")
+        check("tool tooltips are translated",
+              pg4.get_attribute('[data-tool="ring"]', "title").startswith("Ring — mark what to change"))
+        check("screen count is translated", "screen" in pg4.locator("#count").inner_text())
+        check("notes panel is translated", pg4.locator("#panel h2").inner_text().startswith("Notes"))
+        pg4.click('[data-tool="ring"]')
+        vp = pg4.locator(".board iframe").first.bounding_box()
+        pg4.mouse.move(vp["x"] + 10, vp["y"] + 10)
+        pg4.mouse.down()
+        pg4.mouse.move(vp["x"] + 60, vp["y"] + 50)
+        pg4.mouse.up()
+        pg4.wait_for_selector("#notebox textarea")
+        check("note box is translated", pg4.get_attribute("#notebox textarea", "placeholder") == "What should change here?")
+        pg4.fill("#notebox textarea", "unsaved words")
+        pg4.click("#lang")
+        check("language switches without a reload", fit_text() == "Mahuta kõik")
+        check("open note box switches too and keeps the text",
+              pg4.get_attribute("#notebox textarea", "placeholder") == "Mida siin muuta?"
+              and pg4.input_value("#notebox textarea") == "unsaved words")
+        check("panel switches too", pg4.locator("#panel h2").inner_text().startswith("Märkused"))
+        pg4.keyboard.press("Escape")
+        pg4.reload()
+        pg4.wait_for_selector(".board iframe")
+        check("language choice is remembered", fit_text() == "Mahuta kõik")
         b.close()
 finally:
     srv.terminate()

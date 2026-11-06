@@ -94,7 +94,7 @@ try:
     with sync_playwright() as p:
         channel = os.environ.get("BOARDSIMPLE_E2E_CHANNEL") or None
         b = p.chromium.launch(channel=channel)
-        ctx = b.new_context(viewport={"width": 1400, "height": 900})
+        ctx = b.new_context(viewport={"width": 1400, "height": 900}, locale="et-EE")
         pg = ctx.new_page()
         errors = []
         pg.on("pageerror", lambda e: errors.append(str(e)))

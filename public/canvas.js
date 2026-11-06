@@ -1,4 +1,5 @@
 import { layoutBoards, zoomAt, fitAll, screenToWorld, labelMode, nearbyBoards } from "./geometry.js";
+import { initLang, onLangChange, t } from "./i18n.js";
 
 const AUTO_FALLBACK_H = 900;
 const COLOR_KEY = "boardsimple-color";
@@ -13,6 +14,7 @@ const overlayEl = document.getElementById("overlay");
 const zoomEl = document.getElementById("zoom");
 const emptyEl = document.getElementById("empty");
 const connEl = document.getElementById("conn");
+const countEl = document.getElementById("count");
 
 let view = { tx: 0, ty: 0, scale: 1 };
 let tool = "kasi";
@@ -196,6 +198,8 @@ function syncBoards(next) {
   for (const cb of screensListeners) cb(screens);
 }
 
+const showCount = () => { countEl.textContent = t("screens", screens.length); };
+
 async function loadScreens() {
   const res = await fetch("/api/screens");
   if (!res.ok) throw new Error(`screens: ${res.status}`);
@@ -203,8 +207,8 @@ async function loadScreens() {
   root = data.root;
   document.getElementById("project").textContent = root.split(/[\\/]/).filter(Boolean).pop() ?? root;
   document.title = `BoardSimple — ${document.getElementById("project").textContent}`;
-  document.getElementById("count").textContent = `${data.screens.length} ekraani`;
   syncBoards(data.screens);
+  showCount();
   if (!fittedOnce && data.screens.length) {
     fittedOnce = true;
     fit();
@@ -289,9 +293,8 @@ const events = new EventSource("/api/events");
 events.addEventListener("screens", () => loadScreens().catch(console.error));
 events.addEventListener("error", () => {
   // The browser retries network errors by itself, but gives up for good on a bad response.
-  connEl.textContent = events.readyState === EventSource.CLOSED
-    ? "Ühendus katkes. Käivita boardsimple ja värskenda lehte."
-    : "Ühendus katkes, vaade võib olla vana. Proovin uuesti…";
+  connEl.dataset.i18n = events.readyState === EventSource.CLOSED ? "connLost" : "connRetry";
+  connEl.textContent = t(connEl.dataset.i18n);
   connEl.hidden = false;
 });
 events.addEventListener("open", () => {
@@ -319,10 +322,13 @@ gpuProbe.addEventListener("webglcontextlost", (e) => {
 gpuProbe.getContext("webgl");
 document.body.append(gpuProbe);
 
+initLang();
+onLangChange(showCount);
 setTool("kasi");
 setColor(localStorage.getItem(COLOR_KEY));
 setView(view);
 loadScreens().catch((e) => {
   emptyEl.hidden = false;
-  emptyEl.textContent = `Ekraanide laadimine ebaõnnestus: ${e.message}`;
+  delete emptyEl.dataset.i18nHtml; // keep the error if the language changes
+  emptyEl.textContent = t("loadFailed", e.message);
 });
