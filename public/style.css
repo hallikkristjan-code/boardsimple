@@ -57,6 +57,7 @@ button:active { transform: scale(0.96); }
 #theme .moon, html[data-theme="dark"] #theme .sun { display: none; }
 html[data-theme="dark"] #theme .moon { display: block; }
 @media (prefers-color-scheme: dark) { html:not([data-theme]) #theme .sun { display: none; } html:not([data-theme]) #theme .moon { display: block; } }
+#lang { font: 12px/1.5 var(--font-mono); padding: 4px 6px; }
 #zoom { min-width: 48px; padding: 0 8px; color: var(--ink-2); text-align: right; font: 12px/1.5 var(--font-mono); }
 
 #tools { position: fixed; z-index: 10; top: 64px; left: var(--gap); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px; }

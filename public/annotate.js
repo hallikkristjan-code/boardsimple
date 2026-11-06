@@ -3,6 +3,7 @@ import {
   freeWidth, getView, getTool, getColor, getScreens, getRoot, getBoard, boardAt, centerOn, isPanGesture, MARK_TOOLS,
   onViewChange, onScreensChange, onLayoutChange, onReconnect, viewportEl, worldEl, overlayEl, events,
 } from "./canvas.js";
+import { onLangChange, t } from "./i18n.js";
 
 const SVG = "http://www.w3.org/2000/svg";
 const MIN_RING_PX = 6;
@@ -195,7 +196,7 @@ const safely = (fn) => async () => {
   try {
     await fn();
   } catch (e) {
-    alert(`Toiming ebaõnnestus: ${e.message}`);
+    alert(t("actionFailed", e.message));
   }
 };
 
@@ -224,7 +225,7 @@ function editInline(row, n, caret = null) {
       try {
         await api(`/api/annotations/${n.id}`, { method: "PATCH", body: JSON.stringify({ text: ta.value.trim() }) });
       } catch (err) {
-        alert(`Märkuse muutmine ebaõnnestus: ${err.message}`);
+        alert(t("editFailed", err.message));
         return; // keep the textarea and its text
       }
       editing = null;
@@ -236,7 +237,7 @@ function editInline(row, n, caret = null) {
 function renderPanel() {
   const open = notes.filter((n) => n.status !== "done").length;
   const h = document.createElement("h2");
-  h.textContent = "Märkused";
+  h.textContent = t("notes");
   if (open) {
     const count = document.createElement("span");
     count.className = "n";
@@ -248,7 +249,7 @@ function renderPanel() {
   if (!notes.length) {
     const p = document.createElement("p");
     p.className = "empty";
-    p.textContent = "Vali vasakult tööriist ja märgi koht, mida muuta.";
+    p.textContent = t("notesEmpty");
     list.append(p);
   }
   notes.forEach((n, i) => {
@@ -263,7 +264,7 @@ function renderPanel() {
     const body = document.createElement("div");
     const txt = document.createElement("div");
     txt.className = "txt";
-    txt.textContent = n.text || "(tühi märkus)";
+    txt.textContent = n.text || t("emptyNote");
     const meta = document.createElement("div");
     meta.className = "meta";
     meta.textContent = screenOf(n.file)?.title ?? n.file;
@@ -271,18 +272,18 @@ function renderPanel() {
     if (isStale(n)) {
       const badge = document.createElement("span");
       badge.className = "badge";
-      badge.textContent = "fail muutunud";
+      badge.textContent = t("fileChanged");
       body.append(badge);
     }
     const actions = document.createElement("div");
     actions.className = "actions";
     actions.append(
-      button("muuda tekst", () => editInline(row, n)),
-      button(done ? "ava uuesti" : "märgi tehtuks", safely(async () => {
+      button(t("editText"), () => editInline(row, n)),
+      button(t(done ? "reopen" : "markDone"), safely(async () => {
         await api(`/api/annotations/${n.id}`, { method: "PATCH", body: JSON.stringify({ status: done ? "open" : "done" }) });
         await refresh();
       })),
-      button("kustuta", safely(async () => {
+      button(t("remove"), safely(async () => {
         await api(`/api/annotations/${n.id}`, { method: "DELETE" });
         await refresh();
       })),
@@ -297,17 +298,17 @@ function renderPanel() {
   const footer = document.createElement("footer");
   const copyLabel = document.createElement("span");
   const say = (text) => { copyLabel.textContent = text; };
-  say("Kopeeri käsk agendile");
+  say(t("copy"));
   const copy = button("", async () => {
     const sepChar = getRoot().includes("\\") ? "\\" : "/";
     const path = `${getRoot()}${sepChar}.canvas${sepChar}annotations.json`;
     try {
-      await navigator.clipboard.writeText(`vaata märkused üle: ${path} (boardsimple: ${location.origin})`);
-      say("Kopeeritud");
+      await navigator.clipboard.writeText(t("agentCommand", path, location.origin));
+      say(t("copied"));
     } catch {
-      say("Kopeerimine ei õnnestunud");
+      say(t("copyFailed"));
     }
-    setTimeout(() => say("Kopeeri käsk agendile"), 1500);
+    setTimeout(() => say(t("copy")), 1500);
   });
   const copyIcon = svg("svg", { viewBox: "0 0 24 24", "aria-hidden": "true" });
   copyIcon.append(
@@ -402,19 +403,17 @@ function openNotebox() {
   notebox = document.createElement("div");
   notebox.id = "notebox";
   const label = document.createElement("label");
-  label.textContent = `Märkus · ${screenOf(draft.file)?.title ?? draft.file}`;
   label.style.cssText = "display:block;font-weight:600;margin-bottom:6px";
   const ta = document.createElement("textarea");
-  ta.placeholder = "Mida siin muuta?";
   label.htmlFor = ta.id = "notebox-text";
   const row = document.createElement("div");
   row.className = "row";
   const hint = document.createElement("span");
   hint.className = "hint";
-  hint.textContent = "Enter salvestab · Esc tühistab";
-  const save = button("Salvesta", () => saveDraft(ta.value));
+  const save = button("", () => saveDraft(ta.value));
   row.append(hint, save);
   notebox.append(label, ta, row);
+  labelNotebox();
   notebox.addEventListener("pointerdown", (e) => e.stopPropagation());
   ta.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { e.preventDefault(); cancelDraft(); }
@@ -425,6 +424,14 @@ function openNotebox() {
   ta.focus();
   // Read now: the page may be unloaded if the user pans away before saving.
   draft.elements = captureElements(draft.board.el, draft);
+}
+
+function labelNotebox() {
+  if (!notebox) return;
+  notebox.querySelector("label").textContent = t("noteFor", screenOf(draft.file)?.title ?? draft.file);
+  notebox.querySelector("textarea").placeholder = t("notePrompt");
+  notebox.querySelector(".hint").textContent = t("noteHint");
+  notebox.querySelector(".row button").textContent = t("save");
 }
 
 function closeNotebox() {
@@ -459,8 +466,8 @@ async function saveDraft(text) {
   try {
     await api("/api/annotations", { method: "POST", body: JSON.stringify(note) });
   } catch (e) {
-    // Keep the ring and the typed text so the user can retry (Enter / Salvesta).
-    alert(`Märkuse salvestamine ebaõnnestus: ${e.message}`);
+    // Keep the ring and the typed text so the user can retry (Enter / Save).
+    alert(t("saveFailed", e.message));
     notebox?.querySelector("textarea")?.focus();
     return;
   } finally {
@@ -475,6 +482,7 @@ async function saveDraft(text) {
 
 // --- wiring -------------------------------------------------------------------
 onViewChange(positionNotebox);
+onLangChange(() => { labelNotebox(); render(); });
 onLayoutChange(render);
 onScreensChange(render);
 events.addEventListener("annotations", () => refresh().catch(console.error));
