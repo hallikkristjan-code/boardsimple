@@ -4,24 +4,56 @@
 
 [Eesti keeles](README.et.md)
 
-A free, local canvas for reviewing UIs built by agents. HTML screens sit side by side as
-artboards, the canvas updates by itself, and you ring what should change. The notes go to a
-file your agent reads.
+A simple, free board for giving feedback on UIs created by coding agents.
+
+If you don't need all the tools Paper offers and just want a board to review your agent's
+UI proposals, BoardSimple is a lightweight option. Put HTML screens side by side, mark what
+should change, and let your agent read the feedback from a local file. No account or
+subscription is required.
+
+![Three UI directions on BoardSimple, with an annotation for the agent](assets/demo.png)
+
+BoardSimple is an early-stage local tool. It works with HTML files your agent creates;
+it does not embed a running application's URL. It is an independent project, unaffiliated
+with Paper.
 
 ## Install
 
-Needs Node 24+. No dependencies.
+Needs Node.js 24+ and Git. No npm dependencies.
 
 ```sh
-cd C:\Arendus\boardsimple
+git clone https://github.com/hallikkristjan-code/boardsimple.git
+cd boardsimple
 npm link
 ```
+
+From this folder, try the included demo:
+
+```sh
+boardsimple examples/demo-en
+```
+
+Keep the terminal running while you use the board; press Ctrl+C to stop the server.
+On Windows, if PowerShell blocks npm scripts, use `npm.cmd link` and `boardsimple.cmd`.
+
+## Give feedback to your agent
+
+1. Ask your coding agent to create self-contained HTML screens in your project's `screens/` folder.
+   Copy the [agent guide](AGENTS-BOARDSIMPLE.en.md) into the project's `AGENTS.md` or `CLAUDE.md`.
+2. Run `boardsimple ./my-project` from its parent folder, or `boardsimple` inside the project.
+3. Compare the screens, draw a ring, box, line or arrow, and write what should change.
+4. Click **Copy command for agent** and paste it into your agent's chat.
+5. Let the agent read `.canvas/annotations.json` and update the HTML. The board refreshes automatically.
+
+Annotations stay in the project's `.canvas/` folder. Include that folder in your backups;
+add it to your project's `.gitignore` if the feedback is private. BoardSimple stores feedback
+locally; the HTML screens you load may still request external assets.
 
 ## Usage
 
 ```sh
 boardsimple                 # current folder
-boardsimple C:\Arendus\some-project
+boardsimple ./my-project
 boardsimple --port 5000 --no-open
 ```
 
@@ -55,3 +87,7 @@ python -I test/e2e/load.py    # 146-page load test; BOARDSIMPLE_E2E_GPU=1 adds a
 ```
 
 CI runs all of them (node tests on Ubuntu and Windows, e2e and load test on Ubuntu). It does not check the GPU limit, because it has no real GPU.
+
+## License
+
+[MIT](LICENSE). Free to use, modify and share.

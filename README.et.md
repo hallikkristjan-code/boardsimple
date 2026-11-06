@@ -4,24 +4,56 @@
 
 [In English](README.md)
 
-Kohalik, tasuta lõuend agentide tehtud UI-de ülevaatamiseks. HTML-ekraanid on kõrvuti
-artboardidena, lõuend uueneb ise, ja ringiga saab märkida, mida muuta — märkused lähevad
-faili, mille agent loeb.
+Lihtne tasuta tahvel koodiagentide loodud kasutajaliidestele tagasiside andmiseks.
+
+Kui sul pole vaja kõiki Paperi pakutavaid tööriistu, aga tahaksid lihtsat tahvlit agendi
+pakutud UI-de ülevaatamiseks, on BoardSimple kerge võimalus. Vaata HTML-ekraane kõrvuti,
+märgi, mida muuta, ja lase agendil tagasiside kohalikust failist lugeda. Kontot ega
+tellimust pole vaja.
+
+![Kolm UI suunda BoardSimple'is koos agendile mõeldud märkusega](assets/demo.png)
+
+BoardSimple on varajases järgus kohalik tööriist. See kasutab agendi loodud HTML-faile;
+töötava rakenduse URL-i manustada ei saa. Tegemist on iseseisva projektiga, mis pole
+Paperiga seotud.
 
 ## Paigaldus
 
-Vajab Node 24+. Sõltuvusi pole.
+Vajab Node.js 24+ ja Giti. Npm-sõltuvusi pole.
 
 ```sh
-cd C:\Arendus\boardsimple
+git clone https://github.com/hallikkristjan-code/boardsimple.git
+cd boardsimple
 npm link
 ```
+
+Proovi samast kaustast kaasasolevat demot:
+
+```sh
+boardsimple examples/demo
+```
+
+Hoia terminal tahvli kasutamise ajal töös; serveri peatamiseks vajuta Ctrl+C.
+Kui PowerShell blokeerib npm-skriptid, kasuta Windowsis `npm.cmd link` ja `boardsimple.cmd`.
+
+## Anna agendile tagasisidet
+
+1. Palu koodiagendil luua iseseisvad HTML-ekraanid projekti `screens/` kausta.
+   Kopeeri [agendi juhend](AGENTS-BOARDSIMPLE.md) projekti `AGENTS.md` või `CLAUDE.md` faili.
+2. Käivita ülemkaustas `boardsimple ./minu-projekt` või projekti sees `boardsimple`.
+3. Võrdle ekraane, joonista ring, kast, joon või nool ning kirjuta, mida muuta.
+4. Vajuta **Kopeeri käsk agendile** ja kleebi käsk agendi vestlusesse.
+5. Agent loeb `.canvas/annotations.json` faili ja muudab HTML-i. Tahvel uueneb automaatselt.
+
+Märkused jäävad projekti `.canvas/` kausta. Kaasa see varukoopiatesse; kui tagasiside on
+privaatne, lisa kaust projekti `.gitignore` faili. BoardSimple salvestab tagasiside
+kohalikult; laaditavad HTML-ekraanid võivad siiski küsida väliseid ressursse.
 
 ## Kasutus
 
 ```sh
 boardsimple                 # praegune kaust
-boardsimple C:\Arendus\mingi-projekt
+boardsimple ./minu-projekt
 boardsimple --port 5000 --no-open
 ```
 
@@ -54,3 +86,7 @@ python -I test/e2e/load.py    # 146 lehe koormusproov; BOARDSIMPLE_E2E_GPU=1 lis
 ```
 
 CI jooksutab kõik (node-testid Ubuntul ja Windowsil, e2e ja koormusproov Ubuntul). GPU piiri CI ei kontrolli, sest seal pole päris GPU-d.
+
+## Litsents
+
+[MIT](LICENSE). Tasuta kasutamiseks, muutmiseks ja jagamiseks.
