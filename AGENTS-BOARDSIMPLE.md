@@ -14,7 +14,10 @@ Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasuta
 - Hoia fail iseseisev: CSS `<style>`-is, pildid suhteliste teedega samas kaustas.
   Väliseid skripte (CDN) lõuend ei lae — kasuta inline `<script>`-i; välised fondid,
   stiilid ja pildid on lubatud.
-- Lõuend uueneb ise, kui faili salvestad. Kasutaja käivitab selle: `boardsimple` projekti kaustas.
+- Lõuend uueneb ise, kui faili salvestad. Kui lõuend selles projektis ei tööta (pordiotsing on
+  märkuste punktis 5), käivita see ise projekti kaustas ja anna kasutajale link. Ära palu tal
+  terminali avada. See käsk jätab serveri sessioonist sõltumatult tööle:
+  `powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath cmd.exe -ArgumentList '/c','boardsimple'"`
 
 ## Märkused ("vaata märkused üle")
 
