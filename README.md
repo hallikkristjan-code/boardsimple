@@ -19,22 +19,28 @@ with Paper.
 
 ## Install
 
-Needs Node.js 24+ and Git. No npm dependencies.
+Needs Node.js 24+. No npm dependencies.
+
+```sh
+npm install -g boardsimple
+```
+
+Or run it once without installing, inside your project folder:
+
+```sh
+npx boardsimple
+```
+
+Keep the terminal running while you use the board; press Ctrl+C to stop the server.
+On Windows, if PowerShell blocks npm scripts, use `npm.cmd`, `npx.cmd` and `boardsimple.cmd`.
+
+The demo ships in this repository. To try it, you also need Git:
 
 ```sh
 git clone https://github.com/hallikkristjan-code/boardsimple.git
 cd boardsimple
-npm link
-```
-
-From this folder, try the included demo:
-
-```sh
 boardsimple examples/demo-en
 ```
-
-Keep the terminal running while you use the board; press Ctrl+C to stop the server.
-On Windows, if PowerShell blocks npm scripts, use `npm.cmd link` and `boardsimple.cmd`.
 
 ## Give feedback to your agent
 
@@ -63,7 +69,7 @@ profile (`~/.boardsimple/chrome-profile`), so its size and position are remember
 clicked elsewhere lands in a normal tab, which hands over to this window and closes itself. Without
 any of those browsers it opens in your default browser.
 
-Try the demo: `boardsimple examples/demo-en`.
+Try the demo from a clone of this repository: `boardsimple examples/demo-en`.
 
 - **Screens:** `screens/<group>/<name>.html`, sized with `<meta name="artboard" content="width=390,height=844">`.
 - **Tools:** Select (V) — click and scroll inside a screen · Hand (H or Space) — pan · Ring (O), Box (B), Line (P), Arrow (A) — mark. A line closes if you finish near its start; otherwise it stays an underline. The color applies to the next marks.
