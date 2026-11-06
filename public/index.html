@@ -8,6 +8,14 @@
 <link rel="icon" type="image/svg+xml" href="/app/icon.svg">
 <link rel="stylesheet" href="/app/style.css">
 <script>try { const t = localStorage.getItem("boardsimple-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}</script>
+<script>
+// A link to the canvas lands in a normal tab. Hand over to the app window once per
+// tab, then close the tab. If the server refuses or the browser keeps the tab, it stays a working canvas.
+if (matchMedia("(display-mode: browser)").matches && !sessionStorage.getItem("boardsimple-handover")) {
+  sessionStorage.setItem("boardsimple-handover", "1");
+  fetch("/api/open-window", { method: "POST" }).then((r) => { if (r.ok) window.close(); }, () => {});
+}
+</script>
 </head>
 <body class="tool-kasi">
   <header id="top">

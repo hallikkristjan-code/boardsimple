@@ -27,8 +27,9 @@ boardsimple --port 5000 --no-open
 
 The canvas opens in its own window (Chrome, Edge, Chromium or Brave in `--app` mode): it has its
 own taskbar entry, shows up in Alt+Tab and does not get lost among tabs. The window keeps its own
-profile (`~/.boardsimple/chrome-profile`), so its size and position are remembered. Without any of
-those browsers it opens in your default browser.
+profile (`~/.boardsimple/chrome-profile`), so its size and position are remembered. A canvas link
+clicked elsewhere lands in a normal tab, which hands over to this window and closes itself. Without
+any of those browsers it opens in your default browser.
 
 Try the demo: `boardsimple examples/demo-en`.
 

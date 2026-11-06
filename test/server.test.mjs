@@ -251,3 +251,31 @@ test("note with a bad shape, colour or points is rejected", async () => {
     assert.equal((await fetch(u("/api/annotations"), json("POST", { ...note, ...bad }))).status, 400, JSON.stringify(bad));
   }
 });
+
+test("POST /api/open-window asks the launcher for a window, once per burst", async () => {
+  const opened = [];
+  const s = await startServer({ root, port: 0, openWindow: (url) => opened.push(url) });
+  try {
+    assert.equal((await fetch(s.url + "/api/open-window", { method: "POST" })).status, 204);
+    assert.equal((await fetch(s.url + "/api/open-window", { method: "POST" })).status, 429);
+    assert.deepEqual(opened, [s.url]);
+  } finally {
+    await s.close();
+  }
+});
+
+test("POST /api/open-window is unavailable without a launcher", async () => {
+  assert.equal((await fetch(u("/api/open-window"), { method: "POST" })).status, 404);
+});
+
+test("POST /api/open-window refuses a foreign origin", async () => {
+  const opened = [];
+  const s = await startServer({ root, port: 0, openWindow: (url) => opened.push(url) });
+  try {
+    const r = await fetch(s.url + "/api/open-window", { method: "POST", headers: { origin: "http://evil.example" } });
+    assert.equal(r.status, 403);
+    assert.deepEqual(opened, []);
+  } finally {
+    await s.close();
+  }
+});
