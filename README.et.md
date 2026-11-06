@@ -49,6 +49,7 @@ Server kuulab ainult `127.0.0.1` ja keeldub võõra `Origin`/`Host` päisega pä
 npm test                      # node-testid
 python -I test/e2e/e2e.py     # brauseri e2e (pip install playwright && playwright install chromium)
 python -I test/e2e/marks.py   # märkimise tööriistad ja värvid
+python -I test/e2e/window.py  # üleandmine tabist app-aknale
 python -I test/e2e/load.py    # 146 lehe koormusproov; BOARDSIMPLE_E2E_GPU=1 lisab Windowsil GPU mälu piiri
 ```
 
