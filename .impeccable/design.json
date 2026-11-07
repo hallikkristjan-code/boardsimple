@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-07T15:00:00Z",
+  "title": "Design System: BoardSimple",
+  "extensions": {
+    "colorMeta": {
+      "accent-light": { "role": "primary", "displayName": "Workbench Magenta", "canonical": "oklch(58% 0.22 350)", "tonalRamp": ["oklch(18% 0.08 350)", "oklch(30% 0.13 350)", "oklch(42% 0.18 350)", "oklch(58% 0.22 350)", "oklch(68% 0.18 350)", "oklch(78% 0.12 350)", "oklch(87% 0.07 350)", "oklch(95% 0.03 350)"] },
+      "canvas-light": { "role": "neutral", "displayName": "Cool Canvas", "canonical": "oklch(94% 0.012 245)", "tonalRamp": ["oklch(16% 0.012 245)", "oklch(28% 0.012 245)", "oklch(40% 0.012 245)", "oklch(52% 0.012 245)", "oklch(64% 0.012 245)", "oklch(76% 0.012 245)", "oklch(86% 0.012 245)", "oklch(94% 0.012 245)"] }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Title", "purpose": "Project name and the Notes heading." },
+      "note": { "displayName": "Note", "purpose": "Note text, the one thing read at length." },
+      "data": { "displayName": "Data", "purpose": "Numbers and screen names only." }
+    },
+    "shadows": [
+      { "name": "lift", "value": "0 0 0 1px var(--edge), 0 1px 2px var(--shade), 0 6px 16px var(--shade)", "purpose": "Every island." },
+      { "name": "lift-page", "value": "0 0 0 1px var(--edge), 0 2px 6px var(--shade), 0 16px 40px var(--shade-2)", "purpose": "A screen on the canvas." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.2, 0, 0, 1)", "purpose": "The 0.12s press and hover response on controls." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Tool Button",
+      "kind": "button",
+      "refersTo": "tool-button",
+      "description": "An icon tool in the left island; magenta when pressed.",
+      "html": "<button class=\"ds-tool\" aria-pressed=\"true\" aria-label=\"Box\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"4\" y=\"6\" width=\"16\" height=\"12\" rx=\"1\"/></svg></button>",
+      "css": ".ds-tool { width: 36px; height: 36px; border: 0; border-radius: 5px; display: grid; place-items: center; background: none; color: var(--ink-2); cursor: pointer; } .ds-tool svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; } .ds-tool:hover { background: var(--surface-2); color: var(--ink); } .ds-tool[aria-pressed=\"true\"] { background: var(--accent); color: var(--surface); } .ds-tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Pin",
+      "kind": "custom",
+      "refersTo": "pin",
+      "description": "The numbered button that ties a mark to its note.",
+      "html": "<button class=\"ds-pin\" aria-label=\"Note 1\">1</button>",
+      "css": ".ds-pin { width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: #e0383e; color: #08090b; font: 600 11px/20px ui-monospace, monospace; text-align: center; cursor: pointer; box-shadow: 0 0 0 2px var(--surface); } .ds-pin:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Note Action",
+      "kind": "button",
+      "description": "A quiet text action under a note.",
+      "html": "<button class=\"ds-action\">mark done</button>",
+      "css": ".ds-action { border: 0; padding: 0; background: none; color: var(--ink-3); font-size: 12px; cursor: pointer; } .ds-action:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; } .ds-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Workbench",
+    "overview": "BoardSimple is a work surface, not a destination. The screens under review and the marks made on them are the only things that speak.",
+    "keyCharacteristics": [
+      "One accent, magenta from the app icon, used only for the active tool and focus.",
+      "Mark colours belong to the user's feedback, never to the interface.",
+      "Floating islands on a dotted canvas; the canvas holds the depth, the islands hold the controls.",
+      "Every string exists in Estonian and English."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Magenta marks the current tool and keyboard focus. It never decorates, and it never stands for a note.", "section": "colors" },
+      { "name": "The Readable Number Rule", "body": "A number on a mark is white unless white misses 4.5:1 on that colour; then it is on-mark-dark.", "section": "colors" },
+      { "name": "The Mono Means Data Rule", "body": "Monospace is for figures and file names. A label in sentence case stays in the body face.", "section": "typography" },
+      { "name": "The Two Heights Rule", "body": "There are islands and there are pages. A third level means a component has no business existing.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do send every colour and font through a token in public/style.css.",
+      "Do add new text to both languages in public/i18n.js.",
+      "Do keep every control reachable by keyboard, with :focus-visible showing the accent ring.",
+      "Do keep a destructive action undoable."
+    ],
+    "donts": [
+      "Don't use the accent for anything but the current tool and focus.",
+      "Don't add a web font, a third surface height or a decorative animation.",
+      "Don't make a pointer-only control; a click on a div is a bug here.",
+      "Don't add npm dependencies. The app ships as plain files."
+    ]
+  }
+}

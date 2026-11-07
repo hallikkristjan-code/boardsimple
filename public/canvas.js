@@ -37,7 +37,7 @@ export const getColor = () => color;
 export const getScreens = () => screens;
 export const getRoot = () => root;
 export { viewportEl, worldEl, overlayEl };
-export const freeWidth = () => viewportEl.clientWidth - 304; // left of the notes panel
+export const freeWidth = () => viewportEl.clientWidth - chrome().right; // left of the notes panel
 export const onViewChange = (cb) => viewListeners.add(cb);
 export const onScreensChange = (cb) => screensListeners.add(cb);
 export const onLayoutChange = (cb) => layoutListeners.add(cb);
@@ -82,8 +82,11 @@ export function setView(v) {
   for (const cb of viewListeners) cb(view);
 }
 
-// Screen px the floating chrome covers on each side of the canvas.
-const CHROME = { left: 68, top: 60, right: 304, bottom: 12 };
+/** Screen px the floating chrome covers on each side of the canvas. A narrow window has the notes along the bottom. */
+function chrome() {
+  const narrow = matchMedia("(max-width: 700px)").matches;
+  return { left: 68, top: 60, right: narrow ? 12 : 304, bottom: narrow ? viewportEl.clientHeight * 0.38 + 24 : 12 };
+}
 
 function viewportSize() {
   const r = viewportEl.getBoundingClientRect();
@@ -93,16 +96,27 @@ function viewportSize() {
 export function fit() {
   // Reserve room above each board for the board + group labels (~64 screen px at 100%).
   const { w, h } = viewportSize();
-  const free = { w: w - CHROME.left - CHROME.right, h: h - CHROME.top - CHROME.bottom };
+  const c = chrome();
+  const free = { w: w - c.left - c.right, h: h - c.top - c.bottom };
   const v = fitAll(layout.boards.map((b) => ({ ...b, y: b.y - 64, h: b.h + 64 })), free, 16);
-  setView({ ...v, tx: v.tx + CHROME.left, ty: v.ty + CHROME.top });
+  setView({ ...v, tx: v.tx + c.left, ty: v.ty + c.top });
+}
+
+export const usingKeyboard = () => document.body.classList.contains("keyboard");
+
+/** True if a screen rect sits clear of the floating chrome. */
+export function inFreeArea(r) {
+  const { w, h } = viewportSize();
+  const c = chrome();
+  return r.left >= c.left && r.top >= c.top && r.right <= w - c.right && r.bottom <= h - c.bottom;
 }
 
 /** Pan so a world-space rect is centred. */
 export function centerOn(rect) {
   const { w, h } = viewportSize();
-  const cx = CHROME.left + (w - CHROME.left - CHROME.right) / 2;
-  const cy = CHROME.top + (h - CHROME.top - CHROME.bottom) / 2;
+  const c = chrome();
+  const cx = c.left + (w - c.left - c.right) / 2;
+  const cy = c.top + (h - c.top - c.bottom) / 2;
   setView({ ...view, tx: cx - (rect.x + rect.w / 2) * view.scale, ty: cy - (rect.y + rect.h / 2) * view.scale });
 }
 
@@ -218,6 +232,21 @@ async function loadScreens() {
 // --- pan & zoom ---------------------------------------------------------
 let spaceHeld = false;
 let drag = null;
+const touches = new Map(); // pointerId -> viewport point, one entry per finger down
+let pinch = null; // {dist, mid} at the last move
+
+export const isPinching = () => touches.size >= 2;
+
+function movePinch() {
+  const [a, b] = [...touches.values()];
+  const dist = Math.hypot(a.x - b.x, a.y - b.y);
+  const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  if (pinch) {
+    const v = zoomAt(view, mid, dist / pinch.dist);
+    setView({ ...v, tx: v.tx + mid.x - pinch.mid.x, ty: v.ty + mid.y - pinch.mid.y });
+  }
+  pinch = { dist, mid };
+}
 
 const localPoint = (e) => {
   const r = viewportEl.getBoundingClientRect();
@@ -231,26 +260,50 @@ viewportEl.addEventListener("wheel", (e) => {
 }, { passive: false });
 
 export const isPanGesture = (e) => tool === "kasi" || spaceHeld || e.button === 1;
+export const isPin = (e) => Boolean(e.target.closest?.(".ann-pin")); // pointer capture would swallow its click
 
 viewportEl.addEventListener("pointerdown", (e) => {
-  if (!isPanGesture(e)) return;
+  if (e.pointerType === "touch") touches.set(e.pointerId, localPoint(e));
+  if (isPinching()) {
+    drag = null;
+    pinch = null;
+    movePinch();
+    return;
+  }
+  if (!isPanGesture(e) || isPin(e)) return;
   e.preventDefault();
   drag = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
   viewportEl.setPointerCapture(e.pointerId);
   document.body.classList.add("dragging");
 });
 viewportEl.addEventListener("pointermove", (e) => {
+  if (touches.has(e.pointerId)) touches.set(e.pointerId, localPoint(e));
+  if (isPinching()) return movePinch();
   if (!drag) return;
   setView({ ...view, tx: drag.tx + e.clientX - drag.x, ty: drag.ty + e.clientY - drag.y });
 });
-const endDrag = () => { drag = null; document.body.classList.remove("dragging"); };
+const endDrag = (e) => {
+  touches.delete(e.pointerId);
+  if (!isPinching()) pinch = null;
+  drag = null;
+  document.body.classList.remove("dragging");
+};
 viewportEl.addEventListener("pointerup", endDrag);
 viewportEl.addEventListener("pointercancel", endDrag);
 
 const typing = () => ["TEXTAREA", "INPUT"].includes(document.activeElement?.tagName);
+// A button the keyboard is on keeps Space; one that was just clicked does not. :focus-visible
+// cannot tell them apart, because Chromium turns it on for a clicked button at the first key.
+const onKeyboardControl = () => usingKeyboard() && document.activeElement?.tagName === "BUTTON";
+window.addEventListener("keydown", (e) => { if (e.key === "Tab") document.body.classList.add("keyboard"); }, true);
+window.addEventListener("pointerdown", () => document.body.classList.remove("keyboard"), true);
+const releaseSpace = () => {
+  spaceHeld = false;
+  document.body.classList.remove("panning");
+};
 window.addEventListener("keydown", (e) => {
   if (typing() || e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.code === "Space" && !spaceHeld) {
+  if (e.code === "Space" && !spaceHeld && !onKeyboardControl()) {
     spaceHeld = true;
     document.body.classList.add("panning");
     e.preventDefault();
@@ -264,17 +317,14 @@ window.addEventListener("keydown", (e) => {
   if (k === "a") setTool("nool");
   if (k === "1" && e.shiftKey) fit();
 });
-window.addEventListener("keyup", (e) => {
-  if (e.code === "Space") {
-    spaceHeld = false;
-    document.body.classList.remove("panning");
-  }
-});
+window.addEventListener("keyup", (e) => { if (e.code === "Space") releaseSpace(); });
+window.addEventListener("blur", releaseSpace); // the keyup goes to another window
 
 for (const b of document.querySelectorAll("#tools button[data-tool]")) {
   b.addEventListener("click", () => setTool(b.dataset.tool));
 }
 for (const b of document.querySelectorAll("#colors button")) {
+  b.style.setProperty("--c", b.dataset.color);
   b.addEventListener("click", () => setColor(b.dataset.color));
 }
 document.getElementById("fit").addEventListener("click", fit);

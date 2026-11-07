@@ -25,5 +25,7 @@ jobs:
       - run: pip install playwright && python -m playwright install --with-deps chromium
       - run: python -I test/e2e/e2e.py
       - run: python -I test/e2e/marks.py
+      - run: python -I test/e2e/a11y.py
+      - run: python -I test/e2e/touch.py
       - run: python -I test/e2e/window.py
       - run: python -I test/e2e/load.py

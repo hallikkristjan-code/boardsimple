@@ -73,7 +73,7 @@ Proovi repo kloonis demoga: `boardsimple examples/demo` (inglise keeles `example
 - **Ekraanid:** `screens/<rühm>/<nimi>.html`, suurus `<meta name="artboard" content="width=390,height=844">`.
 - **Tööriistad:** Vali (V) — klõpsa ja keri ekraani sees · Käsi (H või tühik) — nihuta · Ring (O), Kast (B), Joon (P), Nool (A) — märgi. Joon sulgub, kui lõpetad alguse lähedal; muidu jääb allakriipsutuseks. Värv kehtib järgmistele märkidele.
 - **Suum:** hiireratas või pinch; "Mahuta kõik" (Shift+1).
-- **Agendile:** märkused salvestuvad kohe `.canvas/annotations.json`-i. Vajuta "Kopeeri käsk agendile" ja kleebi vestlusesse.
+- **Agendile:** märkused salvestuvad kohe `.canvas/annotations.json`-i; kustutatud märkuse saab mõne sekundi jooksul tagasi võtta. Vajuta "Kopeeri käsk agendile" ja kleebi vestlusesse.
 - **Keel:** äpp järgib brauserit (eesti keel, kui see on loetelus, muidu inglise). ET/EN nupp teema nupu kõrval vahetab keelt ja jätab valiku meelde. Käsurida järgib süsteemi keelt; `BOARDSIMPLE_LANG=et` või `en` kirjutab selle üle.
 - **Tõrkeotsing:** kui GPU protsess kukub või lähtestub, tekib rida faili `.canvas/client.log`. Puuduvaid graafikatükke see ei märka.
 
@@ -87,6 +87,8 @@ Server kuulab ainult `127.0.0.1` ja keeldub võõra `Origin`/`Host` päisega pä
 npm test                      # node-testid
 python -I test/e2e/e2e.py     # brauseri e2e (pip install playwright && playwright install chromium)
 python -I test/e2e/marks.py   # märkimise tööriistad ja värvid
+python -I test/e2e/a11y.py    # klaviatuur, tagasivõtt ja kontrast
+python -I test/e2e/touch.py   # üks ja kaks sõrme, kitsas aken
 python -I test/e2e/window.py  # üleandmine tabist app-aknale
 python -I test/e2e/load.py    # 146 lehe koormusproov; BOARDSIMPLE_E2E_GPU=1 lisab Windowsil GPU mälu piiri
 ```

@@ -20,7 +20,7 @@ if (matchMedia("(display-mode: browser)").matches && !sessionStorage.getItem("bo
 <body class="tool-kasi">
   <header id="top">
     <div id="title" class="island">
-      <strong id="project">…</strong>
+      <h1 id="project">…</h1>
       <span id="count"></span>
     </div>
     <span id="conn" role="status" hidden></span>
@@ -54,21 +54,21 @@ if (matchMedia("(display-mode: browser)").matches && !sessionStorage.getItem("bo
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19L19 5M10 5h9v9"/></svg>
     </button>
     <div id="colors" role="group" data-i18n-aria="markColor">
-      <button type="button" data-color="#e0383e" style="--c:#e0383e" data-i18n-title="red" data-i18n-aria="red"></button>
-      <button type="button" data-color="#c9741f" style="--c:#c9741f" data-i18n-title="orange" data-i18n-aria="orange"></button>
-      <button type="button" data-color="#2f8f5b" style="--c:#2f8f5b" data-i18n-title="green" data-i18n-aria="green"></button>
-      <button type="button" data-color="#2f6fc4" style="--c:#2f6fc4" data-i18n-title="blue" data-i18n-aria="blue"></button>
-      <button type="button" data-color="#7a55c7" style="--c:#7a55c7" data-i18n-title="purple" data-i18n-aria="purple"></button>
+      <button type="button" data-color="#e0383e" data-i18n-title="red" data-i18n-aria="red"></button>
+      <button type="button" data-color="#c9741f" data-i18n-title="orange" data-i18n-aria="orange"></button>
+      <button type="button" data-color="#2f8f5b" data-i18n-title="green" data-i18n-aria="green"></button>
+      <button type="button" data-color="#2f6fc4" data-i18n-title="blue" data-i18n-aria="blue"></button>
+      <button type="button" data-color="#7a55c7" data-i18n-title="purple" data-i18n-aria="purple"></button>
     </div>
   </nav>
   <main id="viewport">
     <div id="world">
       <div id="boards"></div>
-      <svg id="overlay" width="1" height="1"></svg>
+      <svg id="overlay" width="1" height="1" aria-hidden="true"></svg>
     </div>
     <p id="empty" data-i18n-html="noScreens" hidden></p>
   </main>
-  <aside id="panel" class="island" data-i18n-aria="notes"></aside>
+  <aside id="panel" class="island" tabindex="-1" data-i18n-aria="notes"></aside>
   <script type="module" src="/app/canvas.js"></script>
   <script type="module" src="/app/annotate.js"></script>
 </body>
