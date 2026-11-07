@@ -167,6 +167,16 @@ try:
         check("a refused delete brings the note back", pg.locator("#undo").count() == 0)
         pg.unroute("**/api/annotations/*")
 
+        # The agent may delete a note first; that is not an error for the user.
+        dialogs = []
+        pg.on("dialog", lambda d: (dialogs.append(d.message), d.dismiss()))
+        pg.route("**/api/annotations/*", lambda r: r.fulfill(status=404) if r.request.method == "DELETE" else r.continue_())
+        pg.locator(f'.note-row[data-note="{third}"] [data-action="remove"]').click()
+        pg.wait_for_selector("#undo button")
+        pg.wait_for_selector(f'.note-row[data-note="{third}"]', timeout=8000)
+        check("a note already deleted raises no error", not dialogs)
+        pg.unroute("**/api/annotations/*")
+
         # Live updates rebuild the pins; the keyboard user's place survives.
         pg.locator(f'.ann-pin[data-note="{third}"]').focus()
         pg.evaluate("""(id) => fetch(`/api/annotations/${id}`, { method: 'PATCH', body: JSON.stringify({ text: 'edited by the agent' }) })""", third)

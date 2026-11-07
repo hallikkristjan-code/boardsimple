@@ -30,7 +30,9 @@ let pendingDelete = null; // {id, timer} - hidden here, still on disk until undo
 // --- data -----------------------------------------------------------------
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { "content-type": "application/json" }, ...opts });
-  if (!res.ok && res.status !== 204) throw new Error(`${opts.method ?? "GET"} ${path}: ${res.status}`);
+  if (!res.ok && res.status !== 204) {
+    throw Object.assign(new Error(`${opts.method ?? "GET"} ${path}: ${res.status}`), { status: res.status });
+  }
   return res.status === 204 ? null : res.json();
 }
 
@@ -261,7 +263,9 @@ async function finishDelete(keepalive = false) {
   const { id, timer } = pendingDelete;
   clearTimeout(timer);
   pendingDelete = null;
-  await api(`/api/annotations/${id}`, { method: "DELETE", keepalive });
+  await api(`/api/annotations/${id}`, { method: "DELETE", keepalive }).catch((e) => {
+    if (e.status !== 404) throw e; // 404: the agent deleted it first, which is what the user wanted
+  });
 }
 
 /** Finish a waiting delete. If the server refuses it, the refresh brings the note back. */
