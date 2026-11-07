@@ -249,6 +249,118 @@ try:
         check("no page errors", not errors)
         ctx.close()
 
+        # Deletes under pressure, with a project that starts empty.
+        ctx = b.new_context(viewport={"width": 1400, "height": 500}, locale="en-US")
+        ctx.grant_permissions(["clipboard-read", "clipboard-write"], origin=url.rstrip("/"))
+        pg = ctx.new_page()
+        pg.goto(url)
+        pg.wait_for_selector("iframe")
+        pg.wait_for_timeout(300)
+        file = saved()[0]["file"]
+        pg.evaluate("""async (ids) => { for (const id of ids) await fetch(`/api/annotations/${id}`, { method: 'DELETE' }); }""",
+                    [n["id"] for n in saved()])
+
+        def seed(count):
+            pg.evaluate("""async ([file, count]) => {
+              for (let i = 0; i < count; i++) await fetch('/api/annotations', { method: 'POST', body: JSON.stringify({
+                file, text: `note ${i}`, shape: 'box', color: '#2f6fc4', elements: [],
+                box: { x: 20 + i * 12, y: 20 + i * 12, w: 60, h: 40 } }) });
+            }""", [file, count])
+            pg.wait_for_function(f"document.querySelectorAll('.note-row').length === {count}")
+
+        def ids():
+            return pg.evaluate("[...document.querySelectorAll('.note-row')].map((r) => r.dataset.note)")
+
+        # Three deletes in a row while the server is slow: none is lost.
+        seed(3)
+        pg.evaluate("""() => {
+          const real = window.fetch;
+          window.fetch = (u, o) => o?.method === 'DELETE'
+            ? new Promise((done) => setTimeout(done, 400)).then(() => real(u, o)) : real(u, o);
+        }""")
+        for _ in range(3):
+            pg.locator('.note-row [data-action="remove"]').first.click()
+        pg.wait_for_function("document.querySelectorAll('.note-row').length === 0")
+        pg.wait_for_timeout(1000)
+        check("a slow delete does not bring its note back", pg.locator(".note-row").count() == 0)
+        pg.wait_for_timeout(6500)
+        check("quick deletes all reach the disk", not saved())
+        check("nothing is left waiting after quick deletes", pg.locator("#undo").count() == 0)
+        pg.reload()
+        pg.wait_for_selector("iframe")
+        pg.wait_for_timeout(300)
+
+        # A live update leaves the list where it was scrolled.
+        seed(8)
+        pg.evaluate("document.querySelector('#panel .list').scrollTop = 150")
+        pg.evaluate("""(id) => fetch(`/api/annotations/${id}`, { method: 'PATCH', body: JSON.stringify({ text: 'moved on' }) })""", ids()[0])
+        pg.wait_for_function("document.querySelector('.note-row .txt').textContent === 'moved on'")
+        check("a live update keeps the list scroll", pg.evaluate("document.querySelector('#panel .list').scrollTop") == 150)
+
+        # Undo from the keyboard lands on the note it restored.
+        target = ids()[-1]
+        pg.locator(".note-row .txt").first.focus()
+        pg.keyboard.press("Tab")
+        pg.locator(f'.note-row[data-note="{target}"] [data-action="remove"]').focus()
+        pg.keyboard.press("Enter")
+        pg.wait_for_selector("#undo button")
+        pg.keyboard.press("Enter")
+        pg.wait_for_selector(f'.note-row[data-note="{target}"]')
+        pg.wait_for_timeout(100)
+        check("undo returns focus to the restored note", active(pg)["note"] == target)
+
+        # The copy button speaks up even while a delete settles.
+        pg.locator(f'.note-row[data-note="{target}"] [data-action="remove"]').click()
+        pg.wait_for_selector("#undo button")
+        pg.click("#panel footer button")
+        pg.wait_for_timeout(300)
+        check("copy confirms with a delete pending", pg.locator("#panel footer button").inner_text() == "Copied")
+        check("copy finishes the delete", target not in [n["id"] for n in saved()])
+
+        # A note deleted with the mouse does not light up another one.
+        pg.mouse.click(700, 490)
+        pg.locator(f'.note-row[data-note="{ids()[0]}"] [data-action="remove"]').click(force=True)
+        pg.wait_for_selector("#undo button")
+        pg.wait_for_selector("#undo", state="detached", timeout=8000)
+        pg.mouse.move(700, 490)
+        pg.wait_for_timeout(200)
+        check("mouse delete highlights nothing afterwards", pg.locator(".note-row.hover").count() == 0)
+
+        # With the server gone the undo line still ends.
+        pg.route("**/api/annotations**", lambda r: r.abort())
+        pg.locator('.note-row [data-action="remove"]').first.click()
+        pg.wait_for_selector("#undo button")
+        pg.wait_for_selector("#undo", state="detached", timeout=8000)
+        check("the undo line ends when the server is gone", True)
+        pg.unroute("**/api/annotations**")
+        pg.reload()
+        pg.wait_for_selector("iframe")
+        pg.wait_for_timeout(300)
+
+        # A pin off-screen comes into view; the canvas itself never scrolls.
+        pg.keyboard.press("h")
+        pg.mouse.move(700, 300)
+        pg.mouse.down()
+        pg.mouse.move(-1200, 300, steps=4)
+        pg.mouse.up()
+        pg.keyboard.press("Tab")
+        pg.locator(".note-row .txt").first.focus()
+        pg.keyboard.press("Shift+Tab")
+        check("Shift+Tab reaches a pin", pg.evaluate("document.activeElement.classList.contains('ann-pin')"))
+        pg.wait_for_timeout(100)
+        check("the canvas does not scroll to a pin", pg.evaluate(
+            "(() => { const v = document.getElementById('viewport'); return v.scrollLeft === 0 && v.scrollTop === 0; })()"))
+        pin_box = pg.evaluate("(() => { const r = document.activeElement.getBoundingClientRect(); return { x: r.x, y: r.y }; })()")
+        check("an off-screen pin comes into view", 68 <= pin_box["x"] <= 1096 and 60 <= pin_box["y"] <= 488)
+
+        # The note under a focused pin goes away: focus stays somewhere useful.
+        note = pg.evaluate("document.activeElement.dataset.note")
+        pg.evaluate("""(id) => fetch(`/api/annotations/${id}`, { method: 'DELETE' })""", note)
+        pg.wait_for_selector(f'.ann-pin[data-note="{note}"]', state="detached")
+        pg.wait_for_timeout(100)
+        check("focus survives the pin's note going away", pg.evaluate("document.activeElement !== document.body"))
+        ctx.close()
+
         ctx = b.new_context(viewport={"width": 320, "height": 640}, locale="en-US")
         pg = ctx.new_page()
         pg.goto(url)

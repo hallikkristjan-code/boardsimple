@@ -1,6 +1,7 @@
 import { isClosedPath, markInk, markSamples, pathBox, pathLength, pinPoint, screenToWorld, worldToScreen } from "./geometry.js";
 import {
-  freeWidth, getView, getTool, getColor, getScreens, getRoot, getBoard, boardAt, centerOn, isPanGesture, isPin, MARK_TOOLS,
+  freeWidth, getView, getTool, getColor, getScreens, getRoot, getBoard, boardAt, centerOn, inFreeArea, isPanGesture, isPin, isPinching,
+  usingKeyboard, MARK_TOOLS,
   onViewChange, onScreensChange, onLayoutChange, onReconnect, viewportEl, worldEl, overlayEl, events,
 } from "./canvas.js";
 import { onLangChange, t } from "./i18n.js";
@@ -25,7 +26,9 @@ let draft = null; // {file, board, start, box, el}
 let notebox = null;
 let editing = null; // {id, value} - unsaved inline edit, survives panel rebuilds from live updates
 let saving = false;
-let pendingDelete = null; // {id, timer} - hidden here, still on disk until undo runs out
+let pendingDelete = null; // {id, note, timer} - hidden here, still on disk until undo runs out
+const deleting = new Set(); // ids whose DELETE is on its way
+let copyStatus = null; // what the copy button says instead of its label, for a moment
 
 // --- data -----------------------------------------------------------------
 async function api(path, opts = {}) {
@@ -36,10 +39,11 @@ async function api(path, opts = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+const byCreated = (a, b) => String(a.createdAt).localeCompare(String(b.createdAt));
+
 async function refresh() {
   const doc = await api("/api/annotations");
-  notes = doc.notes.filter((n) => n.id !== pendingDelete?.id)
-    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  notes = doc.notes.filter((n) => n.id !== pendingDelete?.id && !deleting.has(n.id)).sort(byCreated);
   render();
 }
 
@@ -189,6 +193,9 @@ function render() {
     pin.style.transform = "scale(var(--inv,1))";
     paintMark(pin, n.color);
     highlightWith(pin, n.id);
+    pin.addEventListener("focus", () => {
+      if (usingKeyboard() && !inFreeArea(pin.getBoundingClientRect())) centerOn(m.box);
+    });
     pin.addEventListener("click", () => {
       const row = panel.querySelector(`.note-row[data-note="${CSS.escape(n.id)}"]`);
       row?.scrollIntoView({ block: "nearest" });
@@ -196,7 +203,7 @@ function render() {
     });
     pinsEl.append(pin);
   });
-  if (focusedPin) pinsEl.querySelector(`[data-note="${CSS.escape(focusedPin)}"]`)?.focus({ preventScroll: true });
+  if (focusedPin) (pinsEl.querySelector(`[data-note="${CSS.escape(focusedPin)}"]`) ?? panel).focus({ preventScroll: true });
   if (draft?.box) overlayEl.append(markEl(toWorld(draft, draft.board), ""));
   renderPanel();
   setHover(hoverId);
@@ -263,9 +270,14 @@ async function finishDelete(keepalive = false) {
   const { id, timer } = pendingDelete;
   clearTimeout(timer);
   pendingDelete = null;
-  await api(`/api/annotations/${id}`, { method: "DELETE", keepalive }).catch((e) => {
+  deleting.add(id);
+  try {
+    await api(`/api/annotations/${id}`, { method: "DELETE", keepalive });
+  } catch (e) {
     if (e.status !== 404) throw e; // 404: the agent deleted it first, which is what the user wanted
-  });
+  } finally {
+    deleting.delete(id);
+  }
 }
 
 /** Finish a waiting delete. If the server refuses it, the refresh brings the note back. */
@@ -274,23 +286,37 @@ async function settleDelete() {
   try {
     await finishDelete();
   } finally {
-    await refresh();
+    await refresh().catch(render); // with the server gone, at least drop the undo line
   }
 }
 
 async function removeNote(id) {
-  await settleDelete();
-  pendingDelete = { id, timer: setTimeout(safely(settleDelete), UNDO_MS) };
+  if (pendingDelete?.id === id || deleting.has(id)) return;
+  const note = notes.find((n) => n.id === id);
+  // Runs up to its first await, so the earlier delete is on its way before this one starts waiting.
+  const earlier = settleDelete();
+  pendingDelete = { id, note, timer: setTimeout(safely(settleDelete), UNDO_MS) };
   notes = notes.filter((n) => n.id !== id);
   render();
   panel.querySelector("#undo button").focus();
+  await earlier;
 }
 
 function undoDelete() {
   if (!pendingDelete) return; // its time ran out as the click landed
-  clearTimeout(pendingDelete.timer);
+  const { id, note, timer } = pendingDelete;
+  clearTimeout(timer);
   pendingDelete = null;
+  notes = [...notes, note].sort(byCreated);
+  render();
+  if (usingKeyboard()) panel.querySelector(`.note-row[data-note="${CSS.escape(id)}"] .txt`)?.focus();
   return refresh();
+}
+
+function showCopyStatus(text) {
+  copyStatus = text;
+  const label = panel.querySelector("footer span");
+  if (label) label.textContent = text ?? t("copy");
 }
 
 /** Selector for the panel element holding focus, so it can be found again after a rebuild. */
@@ -363,19 +389,18 @@ function renderPanel() {
   });
   const footer = document.createElement("footer");
   const copyLabel = document.createElement("span");
-  const say = (text) => { copyLabel.textContent = text; };
-  say(t("copy"));
+  copyLabel.textContent = copyStatus ?? t("copy");
   const copy = button("", async () => {
     const sepChar = getRoot().includes("\\") ? "\\" : "/";
     const path = `${getRoot()}${sepChar}.canvas${sepChar}annotations.json`;
+    await safely(settleDelete)(); // the agent must not read a note that is already gone here
     try {
-      await settleDelete(); // the agent must not read a note that is already gone here
       await navigator.clipboard.writeText(t("agentCommand", path, location.origin));
-      say(t("copied"));
+      showCopyStatus(t("copied"));
     } catch {
-      say(t("copyFailed"));
+      showCopyStatus(t("copyFailed"));
     }
-    setTimeout(() => say(t("copy")), 1500);
+    setTimeout(() => showCopyStatus(null), 1500);
   });
   const copyIcon = svg("svg", { viewBox: "0 0 24 24", "aria-hidden": "true" });
   copyIcon.append(
@@ -394,7 +419,9 @@ function renderPanel() {
   const active = document.activeElement;
   const caret = active?.tagName === "TEXTAREA" && panel.contains(active) ? active.selectionStart : -1;
   const focused = panelFocus();
+  const scrolled = panel.querySelector(".list")?.scrollTop ?? 0;
   panel.replaceChildren(h, list, ...undo, ...(open ? [footer] : []));
+  list.scrollTop = scrolled;
   if (editing) {
     // Live updates rebuild the panel; reopen the edit with the unsaved text.
     const row = list.querySelector(`.note-row[data-note="${CSS.escape(editing.id)}"]`);
@@ -403,8 +430,8 @@ function renderPanel() {
     else editing = null; // note was deleted meanwhile
   }
   if (focused && !(editing && caret >= 0)) {
-    const next = panel.querySelector(focused) ?? panel.querySelector(".txt, footer button") ?? panel;
-    next.focus({ preventScroll: true });
+    const nearby = usingKeyboard() ? panel.querySelector(".txt, footer button") : null;
+    (panel.querySelector(focused) ?? nearby ?? panel).focus({ preventScroll: true });
   }
 }
 
@@ -419,6 +446,10 @@ function draftWorldRect() {
 }
 
 viewportEl.addEventListener("pointerdown", (e) => {
+  if (isPinching()) { // a second finger means zoom, whatever the first was drawing
+    if (draft && !notebox) cancelDraft();
+    return;
+  }
   const shape = MARK_TOOLS[getTool()];
   if (!shape || isPanGesture(e) || isPin(e) || e.button !== 0) return;
   if (e.target.closest?.("#notebox")) return;

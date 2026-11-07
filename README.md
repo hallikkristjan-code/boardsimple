@@ -89,6 +89,7 @@ npm test                      # node tests
 python -I test/e2e/e2e.py     # browser e2e (pip install playwright && playwright install chromium)
 python -I test/e2e/marks.py   # marking tools and colors
 python -I test/e2e/a11y.py    # keyboard use, undo and contrast
+python -I test/e2e/touch.py   # one and two fingers, narrow window
 python -I test/e2e/window.py  # hand-over from a tab to the app window
 python -I test/e2e/load.py    # 146-page load test; BOARDSIMPLE_E2E_GPU=1 adds a GPU memory limit on Windows
 ```

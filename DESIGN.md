@@ -146,7 +146,7 @@ The canvas fills the window and the chrome floats above it, all 12px (`gap`) fro
 
 The notes panel is 280px wide and caps at the window height, scrolling its list inside. The canvas never scrolls; it pans and zooms. Labels counter-scale against the zoom to keep their screen size, and hide in steps as boards shrink.
 
-The app is built for a desktop window. Below about 700px the panel covers most of the canvas, which is a known limit.
+The app is built for a desktop window. At 700px and below the notes panel moves to the bottom edge, capped at 38% of the height, and `chrome()` in `public/canvas.js` reserves that space so a screen still fits above it.
 
 ## Elevation & Depth
 

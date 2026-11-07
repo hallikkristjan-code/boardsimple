@@ -82,7 +82,7 @@ html[data-theme="dark"] #theme .moon { display: block; }
 #colors button:hover { background: var(--surface-2); }
 #colors button[aria-pressed="true"]::before { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px light-dark(var(--c), var(--ink)); }
 
-#viewport { position: fixed; inset: 0; overflow: hidden; touch-action: none;
+#viewport { position: fixed; inset: 0; overflow: clip; touch-action: none;
   background-color: var(--canvas);
   background-image: radial-gradient(circle, var(--canvas-dot) 1px, transparent 1px);
   background-size: 24px 24px; }
@@ -145,6 +145,11 @@ html[data-theme="dark"] #theme .moon { display: block; }
 #panel footer button { display: flex; align-items: center; gap: 8px; color: var(--ink); }
 #panel footer button:hover { text-decoration: underline; text-underline-offset: 3px; }
 #panel footer svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* canvas.js reserves this space; keep the width and the 38vh in step with chrome() there. */
+@media (max-width: 700px) {
+  #panel { top: auto; bottom: var(--gap); left: var(--gap); right: var(--gap); width: auto; max-height: 38vh; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   button, .note-row { transition: none; }
