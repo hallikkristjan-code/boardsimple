@@ -231,9 +231,10 @@ viewportEl.addEventListener("wheel", (e) => {
 }, { passive: false });
 
 export const isPanGesture = (e) => tool === "kasi" || spaceHeld || e.button === 1;
+export const isPin = (e) => Boolean(e.target.closest?.(".ann-pin")); // pointer capture would swallow its click
 
 viewportEl.addEventListener("pointerdown", (e) => {
-  if (!isPanGesture(e)) return;
+  if (!isPanGesture(e) || isPin(e)) return;
   e.preventDefault();
   drag = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
   viewportEl.setPointerCapture(e.pointerId);
@@ -248,9 +249,18 @@ viewportEl.addEventListener("pointerup", endDrag);
 viewportEl.addEventListener("pointercancel", endDrag);
 
 const typing = () => ["TEXTAREA", "INPUT"].includes(document.activeElement?.tagName);
+// A button the keyboard is on keeps Space; one that was just clicked does not. :focus-visible
+// cannot tell them apart, because Chromium turns it on for a clicked button at the first key.
+const onKeyboardControl = () => document.body.classList.contains("keyboard") && document.activeElement?.tagName === "BUTTON";
+window.addEventListener("keydown", (e) => { if (e.key === "Tab") document.body.classList.add("keyboard"); }, true);
+window.addEventListener("pointerdown", () => document.body.classList.remove("keyboard"), true);
+const releaseSpace = () => {
+  spaceHeld = false;
+  document.body.classList.remove("panning");
+};
 window.addEventListener("keydown", (e) => {
   if (typing() || e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.code === "Space" && !spaceHeld) {
+  if (e.code === "Space" && !spaceHeld && !onKeyboardControl()) {
     spaceHeld = true;
     document.body.classList.add("panning");
     e.preventDefault();
@@ -264,17 +274,14 @@ window.addEventListener("keydown", (e) => {
   if (k === "a") setTool("nool");
   if (k === "1" && e.shiftKey) fit();
 });
-window.addEventListener("keyup", (e) => {
-  if (e.code === "Space") {
-    spaceHeld = false;
-    document.body.classList.remove("panning");
-  }
-});
+window.addEventListener("keyup", (e) => { if (e.code === "Space") releaseSpace(); });
+window.addEventListener("blur", releaseSpace); // the keyup goes to another window
 
 for (const b of document.querySelectorAll("#tools button[data-tool]")) {
   b.addEventListener("click", () => setTool(b.dataset.tool));
 }
 for (const b of document.querySelectorAll("#colors button")) {
+  b.style.setProperty("--c", b.dataset.color);
   b.addEventListener("click", () => setColor(b.dataset.color));
 }
 document.getElementById("fit").addEventListener("click", fit);

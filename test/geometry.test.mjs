@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   layoutBoards, screenToWorld, worldToScreen, zoomAt, fitAll, ellipseSamples, labelMode, nearbyBoards, MIN_SCALE,
-  rectSamples, isClosedPath, markSamples, pathBox, pinPoint,
+  rectSamples, isClosedPath, markSamples, pathBox, pinPoint, contrast, markInk,
 } from "../public/geometry.js";
+import { readFile } from "node:fs/promises";
 
 const S = (file, group, width, height) => ({ file, group, width, height });
 
@@ -151,4 +152,32 @@ test("pinPoint keeps the arrow pin off the tip and the line pin at its end", () 
   assert.deepEqual(pinPoint({ shape: "arrow", box, points }), { x: 0, y: 0 });
   assert.deepEqual(pinPoint({ shape: "line", box, points }), { x: 100, y: 50 });
   assert.deepEqual(pinPoint({ shape: "box", box }), { x: 100, y: 0 });
+});
+
+const css = await readFile(new URL("../public/style.css", import.meta.url), "utf8");
+const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+const inkOn = (name) => css.match(new RegExp(`--on-mark-${name}: (#[0-9a-f]{6})`))[1];
+
+test("contrast follows WCAG, in either order", () => {
+  assert.equal(contrast("#ffffff", "#000000"), 21);
+  assert.equal(contrast("#000000", "#ffffff"), 21);
+  assert.equal(contrast("#123456", "#123456"), 1);
+});
+
+test("every mark colour gets a number readable at AA", () => {
+  const swatches = [...html.matchAll(/data-color="(#[0-9a-f]{6})"/g)].map((m) => m[1]);
+  assert.equal(swatches.length, 5);
+  for (const c of swatches) {
+    const ratio = contrast(c, inkOn(markInk(c)));
+    assert.ok(ratio >= 4.5, `${c} ${ratio}`);
+  }
+});
+
+test("a mark colour that is not a hex keeps the light number", () => {
+  assert.equal(markInk(undefined), "light");
+  assert.equal(markInk("red"), "light");
+});
+
+test("swatch colours live in data-color alone", () => {
+  assert.ok(!/style="--c:/.test(html));
 });

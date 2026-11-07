@@ -1,6 +1,6 @@
-import { isClosedPath, markSamples, pathBox, pathLength, pinPoint, screenToWorld, worldToScreen } from "./geometry.js";
+import { isClosedPath, markInk, markSamples, pathBox, pathLength, pinPoint, screenToWorld, worldToScreen } from "./geometry.js";
 import {
-  freeWidth, getView, getTool, getColor, getScreens, getRoot, getBoard, boardAt, centerOn, isPanGesture, MARK_TOOLS,
+  freeWidth, getView, getTool, getColor, getScreens, getRoot, getBoard, boardAt, centerOn, isPanGesture, isPin, MARK_TOOLS,
   onViewChange, onScreensChange, onLayoutChange, onReconnect, viewportEl, worldEl, overlayEl, events,
 } from "./canvas.js";
 import { onLangChange, t } from "./i18n.js";
@@ -13,6 +13,7 @@ const MIN_STEP_PX = 2;
 const MAX_POINTS = 2000;
 const ARROW_HEAD = 18;
 const MAX_ELEMENTS = 10;
+const UNDO_MS = 6000;
 const panel = document.getElementById("panel");
 const pinsEl = document.createElement("div");
 pinsEl.id = "pins";
@@ -24,6 +25,7 @@ let draft = null; // {file, board, start, box, el}
 let notebox = null;
 let editing = null; // {id, value} - unsaved inline edit, survives panel rebuilds from live updates
 let saving = false;
+let pendingDelete = null; // {id, timer} - hidden here, still on disk until undo runs out
 
 // --- data -----------------------------------------------------------------
 async function api(path, opts = {}) {
@@ -34,7 +36,8 @@ async function api(path, opts = {}) {
 
 async function refresh() {
   const doc = await api("/api/annotations");
-  notes = [...doc.notes].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  notes = doc.notes.filter((n) => n.id !== pendingDelete?.id)
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
   render();
 }
 
@@ -143,8 +146,14 @@ function markEl(m, cls) {
   else if (shape === "arrow") e = svg("path", { d: arrowPath(m.points), class: classes });
   else if (shape === "line") e = svg(open ? "polyline" : "polygon", { points: pointList(m.points), class: classes });
   else e = ellipse(r, classes);
-  if (m.color) e.style.setProperty("--mark", m.color);
+  paintMark(e, m.color);
   return e;
+}
+
+function paintMark(el, color) {
+  if (!color) return;
+  el.style.setProperty("--mark", color);
+  el.style.setProperty("--mark-ink", `var(--on-mark-${markInk(color)})`);
 }
 
 function setHover(id) {
@@ -155,6 +164,7 @@ function setHover(id) {
 }
 
 function render() {
+  const focusedPin = document.activeElement?.closest?.(".ann-pin")?.dataset.note;
   overlayEl.replaceChildren();
   pinsEl.replaceChildren();
   notes.forEach((n, i) => {
@@ -164,30 +174,42 @@ function render() {
     const ring = markEl(m, done ? " done" : "");
     ring.dataset.note = n.id;
     overlayEl.append(ring);
-    const pin = document.createElement("div");
+    const pin = document.createElement("button");
+    pin.type = "button";
     pin.className = `ann-pin${done ? " done" : ""}`;
     pin.dataset.note = n.id;
     pin.textContent = done ? "✓" : String(i + 1);
     pin.title = n.text;
+    pin.setAttribute("aria-label", t("pinLabel", i + 1, n.text || t("emptyNote")));
     const at = pinPoint(m);
     pin.style.left = `${at.x}px`;
     pin.style.top = `${at.y}px`;
     pin.style.transform = "scale(var(--inv,1))";
-    if (n.color) pin.style.setProperty("--mark", n.color);
-    pin.addEventListener("mouseenter", () => setHover(n.id));
-    pin.addEventListener("mouseleave", () => setHover(null));
-    pin.addEventListener("click", () => panel.querySelector(`.note-row[data-note="${n.id}"]`)?.scrollIntoView({ block: "nearest" }));
+    paintMark(pin, n.color);
+    highlightWith(pin, n.id);
+    pin.addEventListener("click", () => {
+      const row = panel.querySelector(`.note-row[data-note="${CSS.escape(n.id)}"]`);
+      row?.scrollIntoView({ block: "nearest" });
+      row?.querySelector(".txt")?.focus({ preventScroll: true });
+    });
     pinsEl.append(pin);
   });
+  if (focusedPin) pinsEl.querySelector(`[data-note="${CSS.escape(focusedPin)}"]`)?.focus({ preventScroll: true });
   if (draft?.box) overlayEl.append(markEl(toWorld(draft, draft.board), ""));
   renderPanel();
   setHover(hoverId);
 }
 
-function button(label, onClick) {
+function highlightWith(el, id) {
+  for (const on of ["mouseenter", "focusin"]) el.addEventListener(on, () => setHover(id));
+  for (const off of ["mouseleave", "focusout"]) el.addEventListener(off, () => setHover(null));
+}
+
+function button(label, onClick, action) {
   const b = document.createElement("button");
   b.type = "button";
   b.textContent = label;
+  if (action) b.dataset.action = action;
   b.addEventListener("click", (e) => { e.stopPropagation(); onClick(); });
   return b;
 }
@@ -234,6 +256,49 @@ function editInline(row, n, caret = null) {
   });
 }
 
+async function finishDelete(keepalive = false) {
+  if (!pendingDelete) return;
+  const { id, timer } = pendingDelete;
+  clearTimeout(timer);
+  pendingDelete = null;
+  await api(`/api/annotations/${id}`, { method: "DELETE", keepalive });
+}
+
+/** Finish a waiting delete. If the server refuses it, the refresh brings the note back. */
+async function settleDelete() {
+  if (!pendingDelete) return;
+  try {
+    await finishDelete();
+  } finally {
+    await refresh();
+  }
+}
+
+async function removeNote(id) {
+  await settleDelete();
+  pendingDelete = { id, timer: setTimeout(safely(settleDelete), UNDO_MS) };
+  notes = notes.filter((n) => n.id !== id);
+  render();
+  panel.querySelector("#undo button").focus();
+}
+
+function undoDelete() {
+  if (!pendingDelete) return; // its time ran out as the click landed
+  clearTimeout(pendingDelete.timer);
+  pendingDelete = null;
+  return refresh();
+}
+
+/** Selector for the panel element holding focus, so it can be found again after a rebuild. */
+function panelFocus() {
+  const el = document.activeElement;
+  if (!panel.contains(el) || el === panel) return null;
+  const row = el.closest(".note-row");
+  if (!row) return el.closest("#undo") ? "#undo button" : "footer button";
+  const inRow = el.dataset.action ? `[data-action="${el.dataset.action}"]` : ".txt";
+  return `.note-row[data-note="${CSS.escape(row.dataset.note)}"] ${inRow}`;
+}
+
 function renderPanel() {
   const open = notes.filter((n) => n.status !== "done").length;
   const h = document.createElement("h2");
@@ -260,9 +325,10 @@ function renderPanel() {
     const num = document.createElement("div");
     num.className = "num";
     num.textContent = done ? "✓" : String(i + 1);
-    if (n.color) num.style.setProperty("--mark", n.color);
+    paintMark(num, n.color);
     const body = document.createElement("div");
-    const txt = document.createElement("div");
+    const txt = document.createElement("button"); // its click reaches the row, which centres the mark
+    txt.type = "button";
     txt.className = "txt";
     txt.textContent = n.text || t("emptyNote");
     const meta = document.createElement("div");
@@ -278,20 +344,16 @@ function renderPanel() {
     const actions = document.createElement("div");
     actions.className = "actions";
     actions.append(
-      button(t("editText"), () => editInline(row, n)),
+      button(t("editText"), () => editInline(row, n), "edit"),
       button(t(done ? "reopen" : "markDone"), safely(async () => {
         await api(`/api/annotations/${n.id}`, { method: "PATCH", body: JSON.stringify({ status: done ? "open" : "done" }) });
         await refresh();
-      })),
-      button(t("remove"), safely(async () => {
-        await api(`/api/annotations/${n.id}`, { method: "DELETE" });
-        await refresh();
-      })),
+      }), "done"),
+      button(t("remove"), safely(() => removeNote(n.id)), "remove"),
     );
     body.append(actions);
     row.append(num, body);
-    row.addEventListener("mouseenter", () => setHover(n.id));
-    row.addEventListener("mouseleave", () => setHover(null));
+    highlightWith(row, n.id);
     row.addEventListener("click", () => { const m = noteGeom(n); if (m) centerOn(m.box); });
     list.append(row);
   });
@@ -303,6 +365,7 @@ function renderPanel() {
     const sepChar = getRoot().includes("\\") ? "\\" : "/";
     const path = `${getRoot()}${sepChar}.canvas${sepChar}annotations.json`;
     try {
+      await settleDelete(); // the agent must not read a note that is already gone here
       await navigator.clipboard.writeText(t("agentCommand", path, location.origin));
       say(t("copied"));
     } catch {
@@ -317,15 +380,27 @@ function renderPanel() {
   );
   copy.append(copyIcon, copyLabel);
   footer.append(copy);
+  const undo = [];
+  if (pendingDelete) {
+    const bar = document.createElement("div");
+    bar.id = "undo";
+    bar.append(t("noteDeleted"), button(t("undo"), safely(undoDelete)));
+    undo.push(bar);
+  }
   const active = document.activeElement;
   const caret = active?.tagName === "TEXTAREA" && panel.contains(active) ? active.selectionStart : -1;
-  panel.replaceChildren(h, list, ...(open ? [footer] : []));
+  const focused = panelFocus();
+  panel.replaceChildren(h, list, ...undo, ...(open ? [footer] : []));
   if (editing) {
     // Live updates rebuild the panel; reopen the edit with the unsaved text.
     const row = list.querySelector(`.note-row[data-note="${CSS.escape(editing.id)}"]`);
     const n = notes.find((x) => x.id === editing.id);
     if (row && n) editInline(row, n, caret);
     else editing = null; // note was deleted meanwhile
+  }
+  if (focused && !(editing && caret >= 0)) {
+    const next = panel.querySelector(focused) ?? panel.querySelector(".txt, footer button") ?? panel;
+    next.focus({ preventScroll: true });
   }
 }
 
@@ -341,7 +416,7 @@ function draftWorldRect() {
 
 viewportEl.addEventListener("pointerdown", (e) => {
   const shape = MARK_TOOLS[getTool()];
-  if (!shape || isPanGesture(e) || e.button !== 0) return;
+  if (!shape || isPanGesture(e) || isPin(e) || e.button !== 0) return;
   if (e.target.closest?.("#notebox")) return;
   closeNotebox();
   const board = boardAt(localPoint(e));
@@ -370,6 +445,10 @@ viewportEl.addEventListener("pointermove", (e) => {
   }
   draft.box = pathBox(draft.points);
   render();
+});
+
+viewportEl.addEventListener("pointercancel", () => {
+  if (draft && !notebox) cancelDraft();
 });
 
 viewportEl.addEventListener("pointerup", () => {
@@ -487,4 +566,5 @@ onLayoutChange(render);
 onScreensChange(render);
 events.addEventListener("annotations", () => refresh().catch(console.error));
 onReconnect(() => refresh().catch(console.error));
+window.addEventListener("pagehide", () => finishDelete(true).catch(console.error));
 refresh().catch(console.error);
