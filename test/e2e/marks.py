@@ -157,6 +157,31 @@ try:
         pg.wait_for_timeout(200)
         check("click makes no note", pg.locator("#notebox").count() == 0 and pg.locator(".note-row").count() == 4)
 
+        # Start on the canvas, outside the example: draw instead of selecting labels.
+        pg.keyboard.press("b")
+        pg.mouse.move(*to_screen(pg, -12, -12))
+        pg.mouse.down()
+        pg.mouse.move(*to_screen(pg, 300, 300), steps=12)
+        check("outside start previews a box", pg.locator("#overlay rect").count() == 2)
+        check("outside start does not select labels", pg.evaluate("getSelection().toString()") == "")
+        pg.mouse.up()
+        pg.wait_for_selector("#notebox textarea", timeout=3000)
+        pg.press("#notebox textarea", "Escape")
+
+        note = stroke(pg, [(-12, -12), (808, 808)], "kogu näide")
+        check("outside box belongs to the enclosed example", note["file"] == "screens/a/1.html")
+        check("outside box preserves its canvas bounds", note["box"] == {"x": -12, "y": -12, "w": 820, "h": 820})
+        pg.reload()
+        pg.wait_for_selector(".note-row")
+        check("outside box survives reload", pg.locator("#overlay rect").count() == 2)
+
+        pg.keyboard.press("b")
+        pg.mouse.move(*to_screen(pg, -12, 200))
+        pg.mouse.down()
+        pg.mouse.move(*to_screen(pg, -4, 400), steps=6)
+        pg.mouse.up()
+        check("box wholly outside examples makes no note", pg.locator("#notebox").count() == 0)
+
         # A ring from before shapes existed still draws.
         pg.keyboard.press("o")
         doc = json.loads((work / ".canvas/annotations.json").read_text(encoding="utf-8"))

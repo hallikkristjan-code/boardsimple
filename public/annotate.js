@@ -454,7 +454,9 @@ viewportEl.addEventListener("pointerdown", (e) => {
   if (!shape || isPanGesture(e) || isPin(e) || e.button !== 0) return;
   if (e.target.closest?.("#notebox")) return;
   closeNotebox();
-  const board = boardAt(localPoint(e));
+  // A box may start on the canvas. Keep it in world coordinates until its
+  // finished area tells us which example it belongs to.
+  const board = boardAt(localPoint(e)) ?? (shape === "box" ? { file: null, x: 0, y: 0 } : null);
   if (!board) return;
   e.preventDefault();
   const w = screenToWorld(localPoint(e), getView());
@@ -467,8 +469,8 @@ viewportEl.addEventListener("pointermove", (e) => {
   if (!draft || notebox) return;
   const w = screenToWorld(localPoint(e), getView());
   const clamp = (v, max) => Math.min(max, Math.max(0, v));
-  const px = clamp(w.x - draft.board.x, draft.board.w);
-  const py = clamp(w.y - draft.board.y, draft.board.h);
+  const px = draft.file ? clamp(w.x - draft.board.x, draft.board.w) : w.x;
+  const py = draft.file ? clamp(w.y - draft.board.y, draft.board.h) : w.y;
   const p = { x: px, y: py };
   const { points, start, shape } = draft;
   if (shape === "line") {
@@ -497,6 +499,24 @@ viewportEl.addEventListener("pointerup", () => {
     draft = null;
     render();
     return;
+  }
+  if (!draft.file) {
+    const box = draft.box;
+    let board = null;
+    let largestArea = 0;
+    for (const screen of getScreens()) {
+      const b = getBoard(screen.file);
+      if (!b) continue;
+      const area = Math.max(0, Math.min(box.x + box.w, b.x + b.w) - Math.max(box.x, b.x)) *
+        Math.max(0, Math.min(box.y + box.h, b.y + b.h) - Math.max(box.y, b.y));
+      if (area > largestArea) { board = b; largestArea = area; }
+    }
+    if (!board) return cancelDraft();
+    draft.file = board.file;
+    draft.board = board;
+    draft.box = { ...box, x: box.x - board.x, y: box.y - board.y };
+    draft.points = draft.points.map((p) => ({ x: p.x - board.x, y: p.y - board.y }));
+    draft.start = draft.points[0];
   }
   draft.closed = draft.shape === "line" && isClosedPath(draft.points, CLOSE_LOOP_PX / scale);
   render();
