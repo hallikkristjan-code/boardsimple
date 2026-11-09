@@ -1,12 +1,29 @@
 {
   "name": "boardsimple",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A simple, free local board for feedback on agent-created UIs, when you don't need all the tools Paper offers.",
-  "repository": { "type": "git", "url": "https://github.com/hallikkristjan-code/boardsimple.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hallikkristjan-code/boardsimple.git"
+  },
   "type": "module",
-  "bin": { "boardsimple": "bin/boardsimple.mjs" },
-  "files": ["bin", "src", "public", "examples", "!examples/*/.canvas", "AGENTS-BOARDSIMPLE.md", "AGENTS-BOARDSIMPLE.en.md"],
-  "scripts": { "test": "node --test" },
-  "engines": { "node": ">=24" },
+  "bin": {
+    "boardsimple": "bin/boardsimple.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "public",
+    "examples",
+    "!examples/*/.canvas",
+    "AGENTS-BOARDSIMPLE.md",
+    "AGENTS-BOARDSIMPLE.en.md"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=24"
+  },
   "license": "MIT"
 }
