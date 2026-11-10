@@ -146,17 +146,11 @@ html[data-theme="dark"] #theme .moon { display: block; }
 #panel footer button:hover { text-decoration: underline; text-underline-offset: 3px; }
 #panel footer svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
-#agent-controls { margin: 4px 16px 0; padding: 10px 0 4px; border-top: 1px solid var(--hairline); min-height: 64px; overflow: hidden; display: flex; flex-direction: column; flex-shrink: 1; }
-#agent-settings { min-height: 0; overflow: auto; }
-#agent-settings summary { cursor: pointer; color: var(--ink-2); }
-#agent-settings form { display: grid; gap: 6px; padding: 10px 0 4px; }
-#agent-settings label { color: var(--ink-2); font-size: 12px; }
-#agent-settings :is(input, select) { box-sizing: border-box; width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--edge); border-radius: var(--r-control); background: var(--surface); color: var(--ink); font: inherit; }
+#agent-controls { margin: 4px 16px 0; padding: 10px 0 4px; border-top: 1px solid var(--hairline); display: flex; flex-direction: column; flex-shrink: 0; }
 #agent-controls [hidden] { display: none; }
-#agent-hint, #agent-status { margin: 0; font-size: 12px; color: var(--ink-2); overflow-wrap: anywhere; }
+#agent-state, #agent-status { margin: 0; font-size: 12px; color: var(--ink-2); overflow-wrap: anywhere; }
 #agent-status:not(:empty) { margin-top: 8px; }
 #agent-status[data-error="true"] { color: var(--danger); }
-#agent-save { justify-self: start; padding: 5px 0; text-decoration: underline; text-underline-offset: 3px; }
 #agent-send { width: 100%; margin-top: 10px; padding: 7px 10px; border-radius: var(--r-control); background: var(--surface-2); font-weight: 600; flex-shrink: 0; }
 #agent-status { flex-shrink: 0; }
 #agent-controls button:disabled { opacity: .55; cursor: default; }

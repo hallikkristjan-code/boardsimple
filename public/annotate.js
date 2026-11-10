@@ -285,7 +285,7 @@ function showCopyStatus(text) {
 function panelFocus() {
   const el = document.activeElement;
   if (!panel.contains(el) || el === panel) return null;
-  if (el.closest("#agent-controls")) return el.id ? `#${el.id}` : "#agent-summary";
+  if (el.closest("#agent-controls")) return el.id ? `#${el.id}` : "#agent-state";
   const row = el.closest(".note-row");
   if (!row) return el.closest("#undo") ? "#undo button" : "footer button";
   const inRow = el.dataset.action ? `[data-action="${el.dataset.action}"]` : ".txt";
