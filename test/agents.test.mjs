@@ -232,3 +232,15 @@ test("closing the board ends the wait cleanly", async () => {
     assert.deepEqual(JSON.parse(raw.split("\n").filter((l) => l.trim()).at(-1)), { status: "closed" }, `round ${i}`);
   }
 });
+
+test("the agent state reports connected board windows", async (t) => {
+  const { srv, request } = await fixture(t);
+  const windows = async () => (await (await request("/api/agent")).json()).windows;
+  const until = async (n) => { for (let i = 0; i < 200 && (await windows()) !== n; i++) await new Promise((r) => setTimeout(r, 10)); return windows(); };
+  assert.equal(await windows(), 0);
+  const events = http.get(srv.url + "/api/events", { agent: false });
+  events.on("error", () => {});
+  assert.equal(await until(1), 1);
+  events.destroy();
+  assert.equal(await until(0), 0);
+});
