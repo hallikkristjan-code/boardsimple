@@ -7,8 +7,8 @@ import { scanScreens } from "./scan.mjs";
 import { createStore } from "./annotations.mjs";
 import { AgentError, createAgentBridge } from "./agents.mjs";
 
-const DEFAULT_PORT = 4477;
-const PORT_TRIES = 11; // 4477..4487
+export const DEFAULT_PORT = 4477;
+export const PORT_TRIES = 11; // 4477..4487
 const MAX_BODY = 1024 * 1024;
 const DEBOUNCE_MS = 100;
 const PING_MS = 25_000;
@@ -215,6 +215,7 @@ export async function startServer({ root, port, appDir = APP_DIR, openWindow, ag
       if (isWrite && !allowedOrigins().has(origin)) throw new HttpError(403, "same-origin request required");
       if (isWrite && !(req.headers["content-type"] ?? "").startsWith("application/json")) throw new HttpError(415, "JSON required");
       if (rawPath === "/api/agent" && req.method === "GET") return sendJson(res, 200, await agents.state());
+      if (rawPath === "/api/agent/wait" && req.method === "GET") return agents.wait(req, res);
       if (rawPath === "/api/agent/send" && req.method === "POST") {
         await readJson(req);
         return sendJson(res, 200, await agents.send());
@@ -348,7 +349,7 @@ export async function startServer({ root, port, appDir = APP_DIR, openWindow, ag
     url: `http://127.0.0.1:${actualPort}`,
     port: actualPort,
     async close() {
-      agents.close();
+      await agents.close();
       clearInterval(ping);
       stopScreens();
       stopCanvas();
