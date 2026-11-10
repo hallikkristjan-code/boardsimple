@@ -98,9 +98,12 @@ console.log(T.stop);
 
 if (!args.values["no-open"]) openWindow(server.url);
 
-const stop = async () => {
+let stopping = false;
+const stop = async (code = 0) => {
+  if (stopping) return;
+  stopping = true;
   await server.close();
-  process.exit(0);
+  process.exit(code);
 };
-process.on("SIGINT", stop);
-process.on("SIGTERM", stop);
+process.on("SIGINT", () => void stop());
+process.on("SIGTERM", () => void stop());

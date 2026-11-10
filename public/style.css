@@ -4,7 +4,7 @@
 /* Hallmark · waive 7b · --screen and --on-mark-light are the only pure whites · a screen with no background of its own renders on white in a browser, and white is the number on dark marks */
 /* Hallmark · waive 22 · --surface is the only zero-chroma neutral · islands sit on the tinted canvas, so plain white keeps them apart from it */
 /* Hallmark · waive 24b · off-scale values are 6, 10 and 14px inside controls · a dense tool chrome tunes optical padding by hand; outer gaps stay on --gap */
-/* Hallmark · waive 26b · no control in this app is ever disabled · every tool, the theme toggle and Fit all can always run, and a note action that cannot run is not shown */
+/* Agent send controls are disabled while disconnected, unconfigured or sending. */
 /* Hallmark · waive 38iii · the only span in a head is the open-note count · it is a figure in mono beside the Notes label, not an accented word */
 html { color-scheme: light dark; }
 html[data-theme="light"] { color-scheme: light; }
@@ -145,6 +145,22 @@ html[data-theme="dark"] #theme .moon { display: block; }
 #panel footer button { display: flex; align-items: center; gap: 8px; color: var(--ink); }
 #panel footer button:hover { text-decoration: underline; text-underline-offset: 3px; }
 #panel footer svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+#agent-controls { margin: 4px 16px 0; padding: 10px 0 4px; border-top: 1px solid var(--hairline); min-height: 64px; overflow: hidden; display: flex; flex-direction: column; flex-shrink: 1; }
+#agent-settings { min-height: 0; overflow: auto; }
+#agent-settings summary { cursor: pointer; color: var(--ink-2); }
+#agent-settings form { display: grid; gap: 6px; padding: 10px 0 4px; }
+#agent-settings label { color: var(--ink-2); font-size: 12px; }
+#agent-settings :is(input, select) { box-sizing: border-box; width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--edge); border-radius: var(--r-control); background: var(--surface); color: var(--ink); font: inherit; }
+#agent-controls [hidden] { display: none; }
+#agent-hint, #agent-status { margin: 0; font-size: 12px; color: var(--ink-2); overflow-wrap: anywhere; }
+#agent-status:not(:empty) { margin-top: 8px; }
+#agent-status[data-error="true"] { color: var(--danger); }
+#agent-save { justify-self: start; padding: 5px 0; text-decoration: underline; text-underline-offset: 3px; }
+#agent-send { width: 100%; margin-top: 10px; padding: 7px 10px; border-radius: var(--r-control); background: var(--surface-2); font-weight: 600; flex-shrink: 0; }
+#agent-status { flex-shrink: 0; }
+#agent-controls button:disabled { opacity: .55; cursor: default; }
+#agent-send:not(:disabled):hover { box-shadow: inset 0 0 0 1px var(--edge); }
 
 /* canvas.js reserves this space; keep the width and the 38vh in step with chrome() there. */
 @media (max-width: 700px) {

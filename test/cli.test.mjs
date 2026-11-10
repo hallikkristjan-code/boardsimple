@@ -52,6 +52,17 @@ test("boardsimple --help is translated", async () => {
   assert.match(out, /^Usage: boardsimple/);
 });
 
+test("the removed --claude option is refused", async () => {
+  let err = "";
+  const code = await new Promise((resolve) => {
+    const child = spawn(process.execPath, [bin, "--claude", "--no-open", "--port", "0"]);
+    child.stderr.on("data", (data) => { err += data; });
+    child.on("exit", resolve);
+  });
+  assert.equal(code, 1);
+  assert.match(err, /Unknown option '--claude'/);
+});
+
 test("boardsimple prints a friendly error when no port is free", async (t) => {
   const net = await import("node:net");
   const blocker = net.createServer();

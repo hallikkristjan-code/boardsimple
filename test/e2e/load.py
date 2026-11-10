@@ -68,7 +68,7 @@ def check(name, cond):
 
 
 MOUNTED = """[...document.querySelectorAll('.board iframe')]
-  .filter((f) => (f.getAttribute('src') ?? '').startsWith('/screens/')).length"""
+  .filter((f) => new URL(f.getAttribute('src') ?? 'about:blank', document.baseURI).pathname.startsWith('/screens/')).length"""
 
 
 def open_canvas(pg):
@@ -103,24 +103,25 @@ def board_center(pg, title):
     }""", title)
 
 
+def page_frame(pg, title):
+    return pg.locator(".board").filter(has=pg.locator(".board-label", has_text=re.compile("^" + re.escape(title) + "$"))).locator("iframe")
+
+
 def heading_rect(pg, title):
-    """Screen rect of the page heading, from the board position and zoom."""
-    return pg.evaluate("""(t) => {
-      const b = [...document.querySelectorAll('.board')].find((e) => e.querySelector('.board-label').textContent === t);
-      const f = b.querySelector('iframe');
-      const o = f.getBoundingClientRect();
-      const k = o.width / 576;
-      const h = f.contentDocument.getElementById('pealkiri').getBoundingClientRect();
-      return { x: o.x + h.x * k, y: o.y + h.y * k, w: 300 * k, h: h.height * k };
-    }""", title)
+    """Playwright can inspect isolated frames, unlike screen JavaScript."""
+    iframe = page_frame(pg, title)
+    outer = iframe.bounding_box()
+    heading = iframe.element_handle().content_frame().locator("#pealkiri").evaluate("""el => {
+        const r = el.getBoundingClientRect(); return {x:r.x,y:r.y,height:r.height};
+    }""")
+    scale = outer["width"] / 576
+    return {"x": outer["x"] + heading["x"] * scale, "y": outer["y"] + heading["y"] * scale,
+            "w": 300 * scale, "h": heading["height"] * scale}
 
 
 def loaded_heading(pg, title):
-    return pg.evaluate("""(t) => {
-      const b = [...document.querySelectorAll('.board')].find((e) => e.querySelector('.board-label').textContent === t);
-      return b.querySelector('iframe').contentDocument?.getElementById('pealkiri')?.textContent ?? null;
-    }""", title)
-
+    frame = page_frame(pg, title).element_handle().content_frame()
+    return frame.locator("#pealkiri").text_content() if frame.locator("#pealkiri").count() else None
 
 def headless_checks(p):
     channel = os.environ.get("BOARDSIMPLE_E2E_CHANNEL") or None
@@ -138,7 +139,7 @@ def headless_checks(p):
     mounted = pg.evaluate(MOUNTED)
     print(f"     mounted at {pg.inner_text('#zoom')}: {mounted}/{PAGES}")
     check("far pages unloaded when zoomed in", mounted <= 40)
-    pg.wait_for_function("(() => { const f = document.querySelector('.board iframe'); return f.contentDocument?.readyState === 'complete'; })()")
+    page_frame(pg, "lk 0").element_handle().content_frame().locator("#pealkiri").wait_for()
 
     # A note must keep its elements when its page unloads while the note box is open.
     box = pg.locator("#viewport").bounding_box()
@@ -163,10 +164,7 @@ def headless_checks(p):
 
     for _ in range(4):
         pan(pg, 900, 0, button="middle")
-    pg.wait_for_function("""() => {
-      const b = [...document.querySelectorAll('.board')].find((e) => e.querySelector('.board-label').textContent === 'lk 0');
-      return b.querySelector('iframe').contentDocument?.getElementById('pealkiri');
-    }""", timeout=5000)
+    page_frame(pg, "lk 0").element_handle().content_frame().locator("#pealkiri").wait_for(timeout=5000)
     check("page reloads when it comes back", loaded_heading(pg, "lk 0") == "Lehekülg 0")
 
     # A saved file must not load a page that is out of view, and must show once back.
@@ -176,10 +174,7 @@ def headless_checks(p):
     pg.wait_for_timeout(1200)
     check("change to an unloaded page does not load it", loaded_heading(pg, title) is None)
     pg.click("#fit")
-    pg.wait_for_function("""(t) => {
-      const b = [...document.querySelectorAll('.board')].find((e) => e.querySelector('.board-label').textContent === t);
-      return b.querySelector('iframe').contentDocument?.getElementById('pealkiri')?.textContent.startsWith('Muudetud');
-    }""", arg=title, timeout=5000)
+    page_frame(pg, title).element_handle().content_frame().wait_for_function("document.getElementById('pealkiri')?.textContent.startsWith('Muudetud')", timeout=5000)
     check("unloaded page shows the saved change when it returns", True)
     check("no page errors", not errors)
     b.close()
