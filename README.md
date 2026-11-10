@@ -48,8 +48,8 @@ boardsimple examples/demo-en
    Copy the [agent guide](AGENTS-BOARDSIMPLE.en.md) into the project's `AGENTS.md` or `CLAUDE.md`.
 2. Run `boardsimple ./my-project` from its parent folder, or `boardsimple` inside the project.
 3. Compare the screens, draw a ring, box, line or arrow, and write what should change.
-4. Use **Agent connection** to select T3 Code, Claude Code or Codex, then **Send to agent**.
-   You can also click **Copy command for agent** and paste it into your agent's chat.
+4. When your agent is listening, click **Send to agent**. Otherwise click
+   **Copy command for agent** and paste it into the chat.
 5. Let the agent read `.canvas/annotations.json` and update the HTML. The board refreshes automatically.
 
 Annotations stay in the project's `.canvas/` folder. Include that folder in your backups;
@@ -58,34 +58,18 @@ locally; the HTML screens you load may still request external assets.
 
 ### Send directly to an agent
 
-Open **Agent connection** in the notes panel. For **T3 Code** or **Codex**, enter the ID of the
-conversation working on this project and save the connection. Ask your agent for the ID if you
-cannot find it; when the agent started BoardSimple, its conversation ID may already be filled in.
-The choice is remembered for this project in `.canvas/agent.json`.
+Ask your agent to run `boardsimple wait` in the project folder (the agent guide tells it to).
+The command opens the board if needed and waits. The notes panel shows whether an agent is
+listening; while it is, **Send to agent** hands it the open notes and the agent starts working
+in its conversation. Each send saves a snapshot in `.canvas/feedback-<id>.json`, so later edits
+do not change what was sent. Sending does not mark notes done, commit changes or publish anything.
 
-T3 Code must be running locally with its `t3 thread send` CLI available. Codex must be installed
-and signed in, with support for `codex queue --thread ... --message ... --resume`. If an older
-installation lacks those commands, update the agent or use the copy button.
+Verified with Claude Code, Codex and T3 Code on Windows. Other agents are untested, and some stop
+long-running commands early; **Copy command for agent** always works.
 
-For **Claude Code**, start the board and its connected interactive session together:
-
-```sh
-boardsimple ./my-project --claude
-# To continue a specific conversation, first exit it in the other terminal:
-boardsimple ./my-project --claude --claude-session <session-id>
-```
-
-Approve the BoardSimple MCP server and development channel in Claude, then select **Claude Code**
-in the board and save the connection. The channel goes to that open session; no additional API key
-is needed. Custom channels currently require Claude's development-channel opt-in and an account or
-organization that permits channels. Agent permission prompts still appear in Claude. Closing the
-connected Claude session also stops this BoardSimple server.
-
-**Send to agent** asks the selected conversation to implement the open notes immediately. A busy
-agent may queue them. Each send saves a snapshot in `.canvas/feedback-<id>.json`, so later edits
-do not change what was sent. Delivery confirmation means the feedback reached the agent's queue
-or channel; follow the work and any permission prompts in the agent conversation. Sending does
-not mark notes done, commit changes or publish anything. The copy button remains available.
+A board started by `boardsimple wait` runs without a terminal and stops by itself after
+30 minutes with no board window open and no agent waiting. A board you start by hand runs until
+Ctrl+C.
 
 ## Usage
 
@@ -93,6 +77,7 @@ not mark notes done, commit changes or publish anything. The copy button remains
 boardsimple                 # current folder
 boardsimple ./my-project
 boardsimple --port 5000 --no-open
+boardsimple wait            # for agents: open the board and wait for "Send to agent"
 ```
 
 The canvas opens in its own window (Chrome, Edge, Chromium or Brave in `--app` mode): it has its
@@ -106,7 +91,7 @@ Try the demo from a clone of this repository: `boardsimple examples/demo-en`.
 - **Screens:** `screens/<group>/<name>.html`, sized with `<meta name="artboard" content="width=390,height=844">`.
 - **Tools:** Select (V) — click and scroll inside a screen · Hand (H or Space) — pan · Ring (O), Box (B), Line (P), Arrow (A) — mark. A line closes if you finish near its start; otherwise it stays an underline. The color applies to the next marks.
 - **Zoom:** mouse wheel or pinch; "Fit all" (Shift+1).
-- **For the agent:** notes are saved to `.canvas/annotations.json` right away; a deleted note can be undone for a few seconds. Connect an agent and send the open notes, or copy the command into the chat.
+- **For the agent:** notes are saved to `.canvas/annotations.json` right away; a deleted note can be undone for a few seconds. Send the open notes to a waiting agent (`boardsimple wait`), or copy the command into the chat.
 - **Language:** the app follows your browser (Estonian if it is listed, otherwise English). The ET/EN button next to the theme toggle switches it and remembers the choice. The command line follows the system language; `BOARDSIMPLE_LANG=en` or `et` overrides it.
 - **Troubleshooting:** when the GPU process crashes or resets, a line is added to `.canvas/client.log`. Missing graphics tiles do not show up there.
 
@@ -123,7 +108,7 @@ storage belongs to that separate origin. Geometry and annotation hit-tests use a
 npm test                      # node tests
 python -I test/e2e/e2e.py     # browser e2e (pip install playwright && playwright install chromium)
 python -I test/e2e/marks.py   # marking tools and colors
-python -I test/e2e/agents.py  # agent selection, delivery states and reconnect setup
+python -I test/e2e/agents.py  # listening status, send to a waiting agent, screen isolation
 python -I test/e2e/a11y.py    # keyboard use, undo and contrast
 python -I test/e2e/touch.py   # one and two fingers, narrow window
 python -I test/e2e/window.py  # hand-over from a tab to the app window
