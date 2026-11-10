@@ -70,20 +70,43 @@ function defaultOpenWindow(url) {
   launch(["--", cmd, ...cmdArgs]);
 }
 
-/** Hold GET /api/agent/wait; resolves { status } or { line }. No timeout: the server sends heartbeats. */
-function holdWait(url, timeoutSeconds) {
-  return new Promise((done) => {
+function defaultParentAlive() {
+  try { process.kill(process.ppid, 0); return true; } catch (e) { return e.code === "EPERM"; }
+}
+
+/**
+ * Hold GET /api/agent/wait; resolves { status }, { timeout }, { orphaned } or { line }.
+ * No HTTP timeout: the server sends heartbeats. A harness that kills only the
+ * wrapper leaves this process behind; it then stops listening, so the board
+ * never reports "sent" to an agent that is gone.
+ */
+function holdWait(url, timeoutSeconds, parentAlive, parentCheckMs) {
+  return new Promise((finished) => {
     let timer = null;
+    const watch = setInterval(() => {
+      if (!parentAlive()) { req.destroy(); done({ orphaned: true }); }
+    }, parentCheckMs);
+    let settled = false;
+    const done = (value) => {
+      if (settled) return;
+      settled = true;
+      clearInterval(watch);
+      clearTimeout(timer);
+      finished(value);
+    };
     const req = http.get(`${url}/api/agent/wait`, { agent: false }, (res) => {
       if (res.statusCode !== 200) { res.resume(); done({ status: res.statusCode }); return; }
-      if (timeoutSeconds > 0) {
-        timer = setTimeout(() => { req.destroy(); done({ timeout: true }); }, timeoutSeconds * 1000);
-      }
       let raw = "";
+      if (timeoutSeconds > 0) {
+        timer = setTimeout(() => {
+          if (raw.trim()) return; // a final line already arrived; let it finish
+          req.destroy();
+          done({ timeout: true });
+        }, timeoutSeconds * 1000);
+      }
       res.setEncoding("utf8");
       res.on("data", (d) => { raw += d; });
       const finish = () => {
-        clearTimeout(timer);
         const last = raw.split("\n").filter((l) => l.trim()).at(-1);
         try { done({ line: JSON.parse(last) }); } catch { done({ line: null }); }
       };
@@ -91,7 +114,7 @@ function holdWait(url, timeoutSeconds) {
       res.on("close", finish);
       res.on("error", finish);
     });
-    req.on("error", () => { clearTimeout(timer); done({ line: null }); });
+    req.on("error", () => done({ line: null }));
   });
 }
 
@@ -99,6 +122,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function runWait({ root, port = DEFAULT_PORT, timeoutSeconds = 0, open = true,
   startBoard = defaultStartBoard, openWindow = defaultOpenWindow, startTimeoutMs = 10_000,
+  parentAlive = defaultParentAlive, parentCheckMs = 5000,
   out = console.log, err = console.error }) {
   root = resolve(root);
   const unreachable = () => {
@@ -126,8 +150,9 @@ export async function runWait({ root, port = DEFAULT_PORT, timeoutSeconds = 0, o
   if (board.outdated) return outdated(board.url, "old version");
 
   err(`BoardSimple: waiting for feedback at ${board.url}`);
-  const result = await holdWait(board.url, timeoutSeconds);
+  const result = await holdWait(board.url, timeoutSeconds, parentAlive, parentCheckMs);
   if (result.status) return outdated(board.url, result.status);
+  if (result.orphaned) return 2; // nobody reads the output any more
   if (result.timeout) {
     out(`BoardSimple: no feedback after ${timeoutSeconds} s. The board stays open at ${board.url}. Stop waiting; the user can paste a command instead.`);
     return 0;

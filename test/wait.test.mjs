@@ -157,3 +157,14 @@ test("wait reports an unreachable board with exit 2", async () => {
   assert.equal(await runWait({ root, port, open: false, startBoard: () => {}, startTimeoutMs: 500, out: collect(), err }), 2);
   assert.match(err.lines.join("\n"), /no board is reachable for/);
 });
+
+test("a wait whose parent process died stops listening", async (t) => {
+  const { root, srv } = await board(t);
+  let parentAlive = true;
+  const running = runWait({ root, port: srv.port, open: false, startBoard: noStart, out: collect(), err: collect(),
+    parentAlive: () => parentAlive, parentCheckMs: 20 });
+  assert.ok(await until(async () => (await state(srv)).listening));
+  parentAlive = false;
+  assert.equal(await running, 2);
+  assert.ok(await until(async () => !(await state(srv)).listening));
+});
