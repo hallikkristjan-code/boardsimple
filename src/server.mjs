@@ -258,6 +258,8 @@ export async function startServer({ root, port, appDir = APP_DIR, openWindow, ag
     }
     if (rawPath === "/api/open-window" && req.method === "POST" && openWindow) {
       const now = Date.now();
+      // A board window is already open: the tab stays a working canvas instead of opening a duplicate.
+      if (clients.size > 0) throw new HttpError(409, "a board window is already open");
       if (now - lastOpenWindow < OPEN_WINDOW_COOLDOWN_MS) throw new HttpError(429, "window just opened");
       lastOpenWindow = now;
       openWindow(`http://127.0.0.1:${actualPort}`);

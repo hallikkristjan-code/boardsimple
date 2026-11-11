@@ -83,7 +83,8 @@ boardsimple wait            # agendile: ava tahvel ja oota „Saada agendile“ 
 
 Lõuend avaneb eraldi aknas (Chrome, Edge, Chromium või Brave `--app`-režiimis): oma taskbar-kirje,
 Alt+Tab-is nähtav, tabide vahele ei kao. Aknal on oma profiil (`~/.boardsimple/chrome-profile`), nii et suurus ja
-asukoht jäävad meelde. Mujalt klikitud lõuendi link jõuab tavatabi, mis annab töö sellele aknale üle ja sulgeb end.
+asukoht jäävad meelde. Mujalt klikitud lõuendi link jõuab tavatabi. Kui tahvli akent pole lahti, avab tab selle ja sulgeb
+end, muidu jääb tab töötavaks lõuendiks.
 Kui ühtki neist pole, avaneb tavabrauseris.
 
 Proovi repo kloonis demoga: `boardsimple examples/demo` (inglise keeles `examples/demo-en`).

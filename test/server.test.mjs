@@ -277,6 +277,22 @@ test("POST /api/open-window asks the launcher for a window, once per burst", asy
   }
 });
 
+test("POST /api/open-window opens no second window while a board window is connected", async () => {
+  const opened = [];
+  const s = await startServer({ root, port: 0, openWindow: (url) => opened.push(url) });
+  const events = http.get(s.url + "/api/events", { agent: false });
+  events.on("error", () => {});
+  try {
+    await new Promise((r) => events.on("response", r));
+    const r = await fetch(s.url + "/api/open-window", { method: "POST" });
+    assert.equal(r.status, 409);
+    assert.deepEqual(opened, []);
+  } finally {
+    events.destroy();
+    await s.close();
+  }
+});
+
 test("POST /api/open-window is unavailable without a launcher", async () => {
   assert.equal((await fetch(u("/api/open-window"), { method: "POST" })).status, 404);
 });
