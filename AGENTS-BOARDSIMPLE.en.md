@@ -27,7 +27,7 @@ Copy this block into a project's `CLAUDE.md` / `AGENTS.md` when the project uses
    commands in the background and wakes you when they exit (Claude Code), run it in the
    background. Otherwise run it as one blocking call with the longest timeout your tool allows.
 3. When it prints feedback, do what the output says, then run `boardsimple wait` again.
-4. If it prints "no feedback" or your tool stops it, do not loop. The user can paste the copied
+4. If it prints "no feedback", reports that the board was closed, or your tool stops it, do not loop. The user can paste the copied
    command; then follow "Notes".
 5. If it reports that no board is reachable, a sandbox may block local connections: read
    `.canvas/annotations.json` when the user pastes the command.

@@ -177,5 +177,7 @@ export async function runWait({ root, port = DEFAULT_PORT, timeoutSeconds = 0, o
     err("BoardSimple: another agent started waiting on this board. Stop waiting.");
     return 3;
   }
-  return unreachable();
+  // The board answered before, so a sandbox is not the cause: it was closed or stopped.
+  err(`BoardSimple: the board at ${board.url} was closed. Stop waiting; run \`boardsimple wait\` again when the user wants to give feedback.`);
+  return 2;
 }

@@ -29,7 +29,8 @@ Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasuta
    Muidu käivita see ühe blokeeriva kutsena nii pika ajapiiranguga, kui tööriist lubab.
 3. Kui käsk prindib tagasiside, tee seda, mida väljund ütleb, ja käivita siis uuesti
    `boardsimple wait`.
-4. Kui käsk prindib „no feedback“ või tööriist peatab selle, ära käivita seda tsüklis uuesti.
+4. Kui käsk prindib „no feedback“, ütleb, et tahvel suleti, või tööriist peatab selle, ära
+   käivita seda tsüklis uuesti.
    Kasutaja saab kopeeritud käsu kleepida; siis järgi jaotist „Märkused“.
 5. Kui käsk ütleb, et ühtki tahvlit pole kättesaadav, võib liivakast kohalikke ühendusi
    blokeerida: loe `.canvas/annotations.json`, kui kasutaja käsu kleebib.
