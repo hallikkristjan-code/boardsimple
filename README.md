@@ -64,8 +64,8 @@ listening; while it is, **Send to agent** hands it the open notes and the agent 
 in its conversation. Each send saves a snapshot in `.canvas/feedback-<id>.json`, so later edits
 do not change what was sent. Sending does not mark notes done, commit changes or publish anything.
 
-Tested on Windows with Claude Code run through T3 Code and with the Codex CLI. Other agents and
-systems are untested, and some agents stop long-running commands early;
+Tested on Windows with Claude Code run through T3 Code. With the Codex CLI, waiting and the timeout
+work; delivery to Codex is not tested yet. Other agents and systems are untested, and some agents stop long-running commands early;
 **Copy command for agent** always works.
 
 A board started by `boardsimple wait` runs without a terminal and stops by itself after

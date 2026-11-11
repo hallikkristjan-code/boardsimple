@@ -64,8 +64,8 @@ annab **Saada agendile** talle avatud märkused ja agent asub oma vestluses tö�
 salvestub koopia `.canvas/feedback-<id>.json`, mistõttu hilisem muutmine ei muuda saadetud
 ülesannet. Saatmine ise ei märgi märkusi tehtuks, ei tee commit'i ega avalda midagi.
 
-Proovitud Windowsis T3 Code'i kaudu käivitatud Claude Code'i ja Codexi käsureaga. Teisi agente ja
-süsteeme pole proovitud ning mõni agent peatab kaua kestvad käsud varem;
+Proovitud Windowsis T3 Code'i kaudu käivitatud Claude Code'iga. Codexi käsureaga töötavad ootamine
+ja ajapiir; tagasiside jõudmist Codexini pole veel proovitud. Teisi agente ja süsteeme pole proovitud ning mõni agent peatab kaua kestvad käsud varem;
 **Kopeeri käsk agendile** töötab alati.
 
 `boardsimple wait`-i käivitatud tahvel töötab ilma terminalita ja lõpetab ise, kui 30 minutit
