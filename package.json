@@ -1,6 +1,6 @@
 {
   "name": "boardsimple",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "A simple, free local board for feedback on agent-created UIs, when you don't need all the tools Paper offers.",
   "repository": {
     "type": "git",

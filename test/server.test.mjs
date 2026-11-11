@@ -35,6 +35,19 @@ test("GET /api/screens lists screens with root", async () => {
   assert.equal(r.screens[0].title, "Üks");
 });
 
+test("screens have a separate read-only origin without agent endpoints", async () => {
+  const { screenOrigin } = await (await fetch(u("/api/screens"))).json();
+  assert.notEqual(screenOrigin, srv.url);
+  const page = await fetch(`${screenOrigin}/screens/%C3%B5htu%20men%C3%BC%C3%BC/1.html`);
+  assert.equal(page.status, 200);
+  assert.match(page.headers.get("content-security-policy"), /sandbox allow-scripts allow-same-origin/);
+  assert.match(await page.text(), /\/app\/frame\.js/);
+  assert.equal((await fetch(`${screenOrigin}/api/agent`)).status, 404);
+  assert.equal((await fetch(`${screenOrigin}/api/agent/send`, { method: "POST", body: "{}" })).status, 405);
+  assert.equal((await fetch(`${screenOrigin}/app/frame.js`)).status, 200);
+  assert.equal((await fetch(`${screenOrigin}/screens/..%2f..%2fsecret.txt`)).status, 404);
+});
+
 test("GET encoded unicode screen path serves the file", async () => {
   const r = await fetch(u("/screens/%C3%B5htu%20men%C3%BC%C3%BC/1.html"));
   assert.equal(r.status, 200);
@@ -260,6 +273,22 @@ test("POST /api/open-window asks the launcher for a window, once per burst", asy
     assert.equal((await fetch(s.url + "/api/open-window", { method: "POST" })).status, 429);
     assert.deepEqual(opened, [s.url]);
   } finally {
+    await s.close();
+  }
+});
+
+test("POST /api/open-window opens no second window while a board window is connected", async () => {
+  const opened = [];
+  const s = await startServer({ root, port: 0, openWindow: (url) => opened.push(url) });
+  const events = http.get(s.url + "/api/events", { agent: false });
+  events.on("error", () => {});
+  try {
+    await new Promise((r) => events.on("response", r));
+    const r = await fetch(s.url + "/api/open-window", { method: "POST" });
+    assert.equal(r.status, 409);
+    assert.deepEqual(opened, []);
+  } finally {
+    events.destroy();
     await s.close();
   }
 });

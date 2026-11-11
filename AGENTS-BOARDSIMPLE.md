@@ -14,10 +14,28 @@ Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasuta
 - Hoia fail iseseisev: CSS `<style>`-is, pildid suhteliste teedega samas kaustas.
   Väliseid skripte (CDN) lõuend ei lae — kasuta inline `<script>`-i; välised fondid,
   stiilid ja pildid on lubatud.
-- Lõuend uueneb ise, kui faili salvestad. Kui lõuend selles projektis ei tööta (pordiotsing on
-  märkuste punktis 5), käivita see ise projekti kaustas ja anna kasutajale link. Ära palu tal
-  terminali avada. See käsk jätab serveri sessioonist sõltumatult tööle:
-  `powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath cmd.exe -ArgumentList '/c','boardsimple'"`
+- Lõuend uueneb ise, kui faili salvestad. Tahvli näitamiseks ja tagasiside saamiseks käivita
+  projekti kaustas `boardsimple wait` (kui see pole globaalselt paigaldatud, siis
+  `npx boardsimple wait`). Käsk käivitab tahvli, kui see veel ei tööta. Ära palu kasutajal
+  terminali avada.
+
+## Tagasiside ootamine
+
+1. Kui kasutaja tahab kasutajaliidest vaadata või kui oled ekraane loonud või muutnud, käivita
+   `boardsimple wait` ja ütle kasutajale, et tahvel on avatud. Anna aadress realt
+   `BoardSimple: waiting for feedback at <url>`.
+2. Käsk ei prindi midagi enne, kui kasutaja vajutab **Saada agendile**. Kui su tööriist saab
+   käske taustal käivitada ja äratab sind nende lõppedes (Claude Code), käivita see taustal.
+   Muidu käivita see ühe blokeeriva kutsena nii pika ajapiiranguga, kui tööriist lubab.
+3. Kui käsk prindib tagasiside, tee seda, mida väljund ütleb, ja käivita siis uuesti
+   `boardsimple wait`.
+4. Kui käsk prindib „no feedback“, ütleb, et tahvel suleti, või tööriist peatab selle, ära
+   käivita seda tsüklis uuesti.
+   Kasutaja saab kopeeritud käsu kleepida; siis järgi jaotist „Märkused“.
+5. Kui käsk ütleb, et ühtki tahvlit pole kättesaadav, võib liivakast kohalikke ühendusi
+   blokeerida: loe `.canvas/annotations.json`, kui kasutaja käsu kleebib.
+6. Kui käsk ütleb, et tahvel ei saa tagasisidet agendile anda, töötab vanem tahvel: palu
+   kasutajal see sulgeda ja käivita käsk uuesti.
 
 ## Märkused ("vaata märkused üle" / "review the notes")
 
@@ -41,6 +59,8 @@ Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasuta
      edit võib temaga kokku põrgata. `<URL>` on kasutaja kopeeritud käsus
      (`boardsimple: http://127.0.0.1:...`) ja boardsimple'i käivitusreal; port võib olla iga kord erinev:
      `curl -X PATCH <URL>/api/annotations/<id> -H "content-type: application/json" -d "{\"status\":\"done\"}"`
+     (POSIX-shell), PowerShellis:
+     `Invoke-RestMethod -Method Patch -Uri <URL>/api/annotations/<id> -ContentType application/json -Body '{"status":"done"}'`
    - kui URL-i pole teada, proovi porte 4477–4487: õige server on see, mille
      `GET <URL>/api/screens` vastuse `root` on see projekt. 404 märkuse peale tähendab
      teise projekti serverit, mitte luba faili muuta.

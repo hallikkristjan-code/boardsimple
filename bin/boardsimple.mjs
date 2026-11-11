@@ -9,6 +9,7 @@ import { findAppBrowser, openCommand } from "../src/browser.mjs";
 const MESSAGES = {
   et: {
     usage: `Kasutus: boardsimple [kaust] [--port N] [--no-open]
+        boardsimple wait [kaust] [--timeout S]   agendile: käivita vajadusel tahvel ja oota, kuni kasutaja vajutab „Saada agendile“
 
 Avab lõuendi eraldi aknas (Chrome/Edge/Chromium --app); kui ühtki pole, tavabrauseris.
 
@@ -24,6 +25,7 @@ Avab lõuendi eraldi aknas (Chrome/Edge/Chromium --app); kui ühtki pole, tavabr
   },
   en: {
     usage: `Usage: boardsimple [folder] [--port N] [--no-open]
+       boardsimple wait [folder] [--timeout S]   for agents: start the board if needed and block until the user clicks "Send to agent"
 
 Opens the canvas in its own window (Chrome/Edge/Chromium --app); without those, in the default browser.
 
@@ -48,6 +50,8 @@ try {
     options: {
       port: { type: "string" },
       "no-open": { type: "boolean", default: false },
+      timeout: { type: "string" },
+      "idle-exit": { type: "string" },
       help: { type: "boolean", short: "h", default: false },
     },
   });
@@ -61,7 +65,17 @@ if (args.values.help) {
   process.exit(0);
 }
 
-const root = resolve(args.positionals[0] ?? process.cwd());
+const waiting = args.positionals[0] === "wait";
+const positionals = waiting ? args.positionals.slice(1) : args.positionals;
+const positiveInt = (v) => /^[1-9]\d*$/.test(v);
+// Each flag belongs to one command; a wrong combination is a usage error.
+if ((args.values.timeout !== undefined && (!waiting || !positiveInt(args.values.timeout))) ||
+  (args.values["idle-exit"] !== undefined && (waiting || !positiveInt(args.values["idle-exit"])))) {
+  console.error(T.usage);
+  process.exit(1);
+}
+
+const root = resolve(positionals[0] ?? process.cwd());
 try {
   if (!(await stat(root)).isDirectory()) throw new Error();
 } catch {
@@ -70,9 +84,14 @@ try {
 }
 
 const port = args.values.port === undefined ? undefined : Number(args.values.port);
-if (port !== undefined && !(Number.isInteger(port) && port >= 0 && port < 65536)) {
+if (port !== undefined && !(Number.isInteger(port) && port >= (waiting ? 1 : 0) && port < 65536)) {
   console.error(T.badPort(args.values.port));
   process.exit(1);
+}
+
+if (waiting) {
+  const { runWait } = await import("../src/wait.mjs");
+  process.exit(await runWait({ root, port, timeoutSeconds: Number(args.values.timeout ?? 0), open: !args.values["no-open"] }));
 }
 
 const openWindow = (url) => {
@@ -98,9 +117,24 @@ console.log(T.stop);
 
 if (!args.values["no-open"]) openWindow(server.url);
 
-const stop = async () => {
+let stopping = false;
+const stop = async (code = 0) => {
+  if (stopping) return;
+  stopping = true;
   await server.close();
-  process.exit(0);
+  process.exit(code);
 };
-process.on("SIGINT", stop);
-process.on("SIGTERM", stop);
+process.on("SIGINT", () => void stop());
+process.on("SIGTERM", () => void stop());
+
+// Boards started by `boardsimple wait` stop once nobody uses them: no board
+// window and no waiting agent for the whole idle period.
+if (args.values["idle-exit"]) {
+  const idleMs = Number(args.values["idle-exit"]) * 1000;
+  let idleSince = Date.now();
+  setInterval(async () => {
+    const { listening, windows } = await server.activity();
+    if (listening || windows > 0) idleSince = Date.now();
+    else if (Date.now() - idleSince >= idleMs) void stop();
+  }, Math.min(60_000, idleMs / 2)).unref();
+}

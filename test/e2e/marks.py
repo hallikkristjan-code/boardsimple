@@ -61,10 +61,11 @@ def to_screen(pg, x, y):
 
 
 def rect(pg, selector):
-    return pg.evaluate("""(s) => {
-      const r = document.querySelector('iframe').contentDocument.querySelector(s).getBoundingClientRect();
+    frame = pg.locator("iframe").element_handle().content_frame()
+    return frame.locator(selector).evaluate("""el => {
+      const r = el.getBoundingClientRect();
       return { x: r.x, y: r.y, w: r.width, h: r.height };
-    }""", selector)
+    }""")
 
 
 def stroke(pg, points, text):

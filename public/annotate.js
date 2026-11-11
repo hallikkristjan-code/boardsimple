@@ -5,6 +5,8 @@ import {
   onViewChange, onScreensChange, onLayoutChange, onReconnect, viewportEl, worldEl, overlayEl, events,
 } from "./canvas.js";
 import { onLangChange, t } from "./i18n.js";
+import { createAgentControls } from "./agent.js";
+import { requestFrame } from "./frame-client.js";
 
 const SVG = "http://www.w3.org/2000/svg";
 const MIN_RING_PX = 6;
@@ -13,7 +15,6 @@ const CLOSE_LOOP_PX = 24;
 const MIN_STEP_PX = 2;
 const MAX_POINTS = 2000;
 const ARROW_HEAD = 18;
-const MAX_ELEMENTS = 10;
 const UNDO_MS = 6000;
 const panel = document.getElementById("panel");
 const pinsEl = document.createElement("div");
@@ -29,6 +30,7 @@ let saving = false;
 let pendingDelete = null; // {id, note, timer} - hidden here, still on disk until undo runs out
 const deleting = new Set(); // ids whose DELETE is on its way
 let copyStatus = null; // what the copy button says instead of its label, for a moment
+const agentControls = createAgentControls({ beforeSend: settleDelete });
 
 // --- data -----------------------------------------------------------------
 async function api(path, opts = {}) {
@@ -54,52 +56,12 @@ const isStale = (n) => {
 };
 
 // --- element capture --------------------------------------------------------
-function selectorFor(el) {
-  const parts = [];
-  for (let cur = el; cur && cur.nodeType === 1 && cur.tagName.toLowerCase() !== "body"; cur = cur.parentElement) {
-    const tag = cur.tagName.toLowerCase();
-    if (cur.id) {
-      parts.unshift(`${tag}#${CSS.escape(cur.id)}`);
-      break;
-    }
-    const classes = [...cur.classList].slice(0, 2).map((c) => `.${CSS.escape(c)}`).join("");
-    const parent = cur.parentElement;
-    const same = parent ? [...parent.children].filter((c) => c.tagName === cur.tagName) : [];
-    const nth = same.length > 1 ? `:nth-of-type(${same.indexOf(cur) + 1})` : "";
-    parts.unshift(tag + classes + nth);
-  }
-  return parts.join(" > ") || "body";
-}
-
-const intersects = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-
-function captureElements(iframe, mark) {
-  const doc = iframe.contentDocument;
-  if (!doc) return [];
-  const found = new Set();
+async function captureElements(iframe, mark) {
   const samples = markSamples(mark);
   const area = pathBox(samples);
-  const box = { x: area.x - 1, y: area.y - 1, w: area.w + 2, h: area.h + 2 }; // a line's area can be 0 high
-  for (const p of samples) {
-    for (const el of doc.elementsFromPoint(p.x, p.y)) {
-      const tag = el.tagName.toLowerCase();
-      if (tag !== "html" && tag !== "body") found.add(el);
-    }
-  }
-  const rectOf = (el) => {
-    const r = el.getBoundingClientRect();
-    return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
-  };
-  // Keep the deepest elements: drop anything that contains another hit.
-  const hits = [...found].filter((el) => intersects(rectOf(el), box));
-  const deepest = hits.filter((el) => !hits.some((o) => o !== el && el.contains(o)));
-  deepest.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
-  return deepest.slice(0, MAX_ELEMENTS).map((el) => ({
-    selector: selectorFor(el),
-    tag: el.tagName.toLowerCase(),
-    text: (el.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 80),
-    box: rectOf(el),
-  }));
+  const box = { x: area.x - 1, y: area.y - 1, w: area.w + 2, h: area.h + 2 };
+  const elements = await requestFrame(iframe, "capture", { samples, box });
+  return Array.isArray(elements) ? elements.slice(0, 10) : [];
 }
 
 // --- rendering --------------------------------------------------------------
@@ -323,6 +285,7 @@ function showCopyStatus(text) {
 function panelFocus() {
   const el = document.activeElement;
   if (!panel.contains(el) || el === panel) return null;
+  if (el.closest("#agent-controls")) return el.id ? `#${el.id}` : "#agent-state";
   const row = el.closest(".note-row");
   if (!row) return el.closest("#undo") ? "#undo button" : "footer button";
   const inRow = el.dataset.action ? `[data-action="${el.dataset.action}"]` : ".txt";
@@ -330,7 +293,12 @@ function panelFocus() {
 }
 
 function renderPanel() {
+  const active = document.activeElement;
+  const caret = active?.tagName === "TEXTAREA" && panel.contains(active) ? active.selectionStart : -1;
+  const focused = panelFocus();
+  const scrolled = panel.querySelector(".list")?.scrollTop ?? 0;
   const open = notes.filter((n) => n.status !== "done").length;
+  agentControls.setOpenCount(open);
   const h = document.createElement("h2");
   h.textContent = t("notes");
   if (open) {
@@ -416,11 +384,7 @@ function renderPanel() {
     bar.append(t("noteDeleted"), button(t("undo"), safely(undoDelete)));
     undo.push(bar);
   }
-  const active = document.activeElement;
-  const caret = active?.tagName === "TEXTAREA" && panel.contains(active) ? active.selectionStart : -1;
-  const focused = panelFocus();
-  const scrolled = panel.querySelector(".list")?.scrollTop ?? 0;
-  panel.replaceChildren(h, list, ...undo, ...(open ? [footer] : []));
+  panel.replaceChildren(h, list, ...undo, agentControls.el, ...(open ? [footer] : []));
   list.scrollTop = scrolled;
   if (editing) {
     // Live updates rebuild the panel; reopen the edit with the unsaved text.
@@ -557,7 +521,7 @@ function openNotebox() {
   positionNotebox();
   ta.focus();
   // Read now: the page may be unloaded if the user pans away before saving.
-  draft.elements = captureElements(draft.board.el, draft);
+  draft.capture = captureElements(draft.board.el, draft);
 }
 
 function labelNotebox() {
@@ -585,18 +549,20 @@ const roundPoints = (points) => points.map((p) => ({ x: Math.round(p.x), y: Math
 async function saveDraft(text) {
   const d = draft;
   if (saving || !d?.box) return;
+  saving = true;
+  const elements = await d.capture;
+  if (draft !== d) { saving = false; return; }
   const note = {
     file: d.file,
     fileHash: screenOf(d.file)?.hash ?? null,
     box: roundBox(d.box),
     text: text.trim(),
-    elements: d.elements,
+    elements,
     shape: d.shape,
     color: d.color,
     ...(d.shape === "line" && { closed: d.closed }),
     ...((d.shape === "line" || d.shape === "arrow") && { points: roundPoints(d.points) }),
   };
-  saving = true;
   try {
     await api("/api/annotations", { method: "POST", body: JSON.stringify(note) });
   } catch (e) {

@@ -1,5 +1,6 @@
 import { layoutBoards, zoomAt, fitAll, screenToWorld, labelMode, nearbyBoards } from "./geometry.js";
 import { initLang, onLangChange, t } from "./i18n.js";
+import { requestFrame } from "./frame-client.js";
 
 const AUTO_FALLBACK_H = 900;
 const COLOR_KEY = "boardsimple-color";
@@ -21,6 +22,7 @@ let tool = "kasi";
 let color = null;
 let screens = [];
 let root = "";
+let screenOrigin = "";
 let layout = { boards: [], groups: [] };
 const measured = new Map(); // file -> measured height for height:"auto"
 const boardEls = new Map(); // file -> {wrap, label, iframe, hash}
@@ -159,15 +161,13 @@ function syncLoaded() {
   }
 }
 
-function measure(s, iframe) {
+async function measure(s, iframe) {
   if (s.height !== "auto" || iframe.getAttribute("src") === "about:blank") return;
-  try {
-    const h = Math.ceil(iframe.contentDocument.documentElement.scrollHeight);
-    if (h > 0 && measured.get(s.file) !== h) {
-      measured.set(s.file, h);
-      relayout();
-    }
-  } catch { /* cross-origin should not happen; keep fallback height */ }
+  const h = await requestFrame(iframe, "height");
+  if (Number.isFinite(h) && h > 0 && h < 1_000_000 && measured.get(s.file) !== h && boardEls.has(s.file)) {
+    measured.set(s.file, h);
+    relayout();
+  }
 }
 
 function createBoard(s) {
@@ -177,6 +177,7 @@ function createBoard(s) {
   label.className = "board-label";
   label.style.transform = "scale(var(--inv,1))";
   const iframe = document.createElement("iframe");
+  iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
   iframe.setAttribute("scrolling", "no");
   iframe.src = "about:blank";
   iframe.addEventListener("load", () => measure(screens.find((x) => x.file === s.file) ?? s, iframe));
@@ -202,7 +203,7 @@ function syncBoards(next) {
     rec.label.title = s.title;
     rec.iframe.title = s.title;
     const version = `${s.hash.slice(0, 12)}${(s.assetsHash ?? "").slice(0, 12)}`;
-    const url = `/screens/${encodePath(s.file)}?v=${version}`;
+    const url = `${screenOrigin}/screens/${encodePath(s.file)}?v=${version}`;
     // A loaded page takes the new version now; an unloaded one picks it up in syncLoaded.
     if (rec.url && rec.url !== url && rec.iframe.getAttribute("src") === rec.url) rec.iframe.src = url;
     rec.url = url;
@@ -219,6 +220,7 @@ async function loadScreens() {
   if (!res.ok) throw new Error(`screens: ${res.status}`);
   const data = await res.json();
   root = data.root;
+  screenOrigin = data.screenOrigin;
   document.getElementById("project").textContent = root.split(/[\\/]/).filter(Boolean).pop() ?? root;
   document.title = `BoardSimple — ${document.getElementById("project").textContent}`;
   syncBoards(data.screens);
@@ -291,10 +293,10 @@ const endDrag = (e) => {
 viewportEl.addEventListener("pointerup", endDrag);
 viewportEl.addEventListener("pointercancel", endDrag);
 
-const typing = () => ["TEXTAREA", "INPUT"].includes(document.activeElement?.tagName);
+const typing = () => ["TEXTAREA", "INPUT", "SELECT"].includes(document.activeElement?.tagName);
 // A button the keyboard is on keeps Space; one that was just clicked does not. :focus-visible
 // cannot tell them apart, because Chromium turns it on for a clicked button at the first key.
-const onKeyboardControl = () => usingKeyboard() && document.activeElement?.tagName === "BUTTON";
+const onKeyboardControl = () => usingKeyboard() && ["BUTTON", "SUMMARY"].includes(document.activeElement?.tagName);
 window.addEventListener("keydown", (e) => { if (e.key === "Tab") document.body.classList.add("keyboard"); }, true);
 window.addEventListener("pointerdown", () => document.body.classList.remove("keyboard"), true);
 const releaseSpace = () => {

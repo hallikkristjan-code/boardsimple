@@ -7,24 +7,25 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       - run: npm test
   e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install playwright && python -m playwright install --with-deps chromium
       - run: python -I test/e2e/e2e.py
       - run: python -I test/e2e/marks.py
+      - run: python -I test/e2e/agents.py
       - run: python -I test/e2e/a11y.py
       - run: python -I test/e2e/touch.py
       - run: python -I test/e2e/window.py

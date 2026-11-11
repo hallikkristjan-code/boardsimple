@@ -14,11 +14,25 @@ Copy this block into a project's `CLAUDE.md` / `AGENTS.md` when the project uses
 - Keep the file self-contained: CSS in `<style>`, images on relative paths in the same folder.
   The canvas does not load external scripts (CDN), so use inline `<script>`; external fonts,
   styles and images are allowed.
-- The canvas updates by itself when you save a file. If the canvas is not running for this
-  project (the port lookup is in point 5 under Notes), start it yourself in the project folder
-  and give the user the link. Do not ask them to open a terminal. This command leaves the server
-  running independently of the session:
-  `powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath cmd.exe -ArgumentList '/c','boardsimple'"`
+- The canvas updates by itself when you save a file. To show the board and receive feedback, run
+  `boardsimple wait` in the project folder (`npx boardsimple wait` when it is not installed
+  globally). It starts the board when none is running. Do not ask the user to open a terminal.
+
+## Waiting for feedback
+
+1. When the user wants to look at the UI, or after you have created or changed screens, run
+   `boardsimple wait` and tell the user the board is open, giving the address from the line
+   `BoardSimple: waiting for feedback at <url>`.
+2. The command prints nothing until the user clicks **Send to agent**. If your tool can run
+   commands in the background and wakes you when they exit (Claude Code), run it in the
+   background. Otherwise run it as one blocking call with the longest timeout your tool allows.
+3. When it prints feedback, do what the output says, then run `boardsimple wait` again.
+4. If it prints "no feedback", reports that the board was closed, or your tool stops it, do not loop. The user can paste the copied
+   command; then follow "Notes".
+5. If it reports that no board is reachable, a sandbox may block local connections: read
+   `.canvas/annotations.json` when the user pastes the command.
+6. If it reports that the board cannot hand feedback to an agent, an older board is running:
+   ask the user to close it, then run the command again.
 
 ## Notes ("review the notes")
 
@@ -42,6 +56,8 @@ Copy this block into a project's `CLAUDE.md` / `AGENTS.md` when the project uses
      (`boardsimple: http://127.0.0.1:...`) and in boardsimple's startup line; the port can differ
      each time:
      `curl -X PATCH <URL>/api/annotations/<id> -H "content-type: application/json" -d "{\"status\":\"done\"}"`
+     (POSIX shells), or in PowerShell:
+     `Invoke-RestMethod -Method Patch -Uri <URL>/api/annotations/<id> -ContentType application/json -Body '{"status":"done"}'`
    - if the URL is unknown, try ports 4477–4487: the right server is the one whose
      `GET <URL>/api/screens` response has this project as `root`. A 404 for a note means another
      project's server, not permission to edit the file.
