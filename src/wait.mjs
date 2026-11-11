@@ -2,8 +2,8 @@
 // long-lived request until the user clicks "Send to agent". Everything printed
 // here is read by an agent, so it is English only.
 import http from "node:http";
-import { realpathSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { closeSync, mkdirSync, openSync, realpathSync, statSync, unlinkSync } from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_PORT, PORT_TRIES } from "./server.mjs";
@@ -120,6 +120,25 @@ function holdWait(url, timeoutSeconds, parentAlive, parentCheckMs) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Only one wait starts a board for a folder; the others find it. Returns true
+ * when this wait may start it. A lock older than staleMs is left by a wait that
+ * died and is taken over. If no lock can be made, starting anyway is the safe side.
+ */
+function takeStartLock(path, staleMs) {
+  try { mkdirSync(dirname(path), { recursive: true }); } catch { return true; }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try { closeSync(openSync(path, "wx")); return true; } catch (e) {
+      if (e.code !== "EEXIST") return true;
+      try {
+        if (Date.now() - statSync(path).mtimeMs < staleMs) return false;
+        unlinkSync(path);
+      } catch { /* removed meanwhile: try again */ }
+    }
+  }
+  return false;
+}
+
 export async function runWait({ root, port = DEFAULT_PORT, timeoutSeconds = 0, open = true,
   startBoard = defaultStartBoard, openWindow = defaultOpenWindow, startTimeoutMs = 10_000,
   parentAlive = defaultParentAlive, parentCheckMs = 5000,
@@ -136,12 +155,20 @@ export async function runWait({ root, port = DEFAULT_PORT, timeoutSeconds = 0, o
 
   let board = await findBoard({ root, port });
   if (!board) {
-    err(`BoardSimple: starting the board for ${root}`);
-    await startBoard({ root, port, open });
-    const end = Date.now() + startTimeoutMs;
-    while (!board && Date.now() < end) {
-      await sleep(250);
-      board = await findBoard({ root, port });
+    const lock = join(root, ".canvas", "wait-start.lock");
+    const owner = takeStartLock(lock, startTimeoutMs);
+    try {
+      if (owner) {
+        err(`BoardSimple: starting the board for ${root}`);
+        await startBoard({ root, port, open });
+      }
+      const end = Date.now() + startTimeoutMs;
+      while (!board && Date.now() < end) {
+        await sleep(250);
+        board = await findBoard({ root, port });
+      }
+    } finally {
+      if (owner) try { unlinkSync(lock); } catch { /* already gone */ }
     }
     if (!board) return unreachable();
   } else if (!board.outdated && open && board.windows === 0) {

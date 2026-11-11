@@ -150,6 +150,23 @@ test("wait starts the board when none is running", async (t) => {
   assert.equal(calls, 1);
 });
 
+test("two waits that start at once start one board", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "boardsimple-twice-"));
+  await mkdir(join(root, "screens"));
+  const port = await freePort();
+  let calls = 0;
+  const startBoard = async () => {
+    if (++calls > 1) return;
+    await new Promise((r) => setTimeout(r, 300));
+    const srv = await startServer({ root, port });
+    t.after(() => srv.close());
+  };
+  const run = () => runWait({ root, port, timeoutSeconds: 1, open: false, startBoard, out: collect(), err: collect() });
+  await Promise.all([run(), run()]);
+  assert.equal(calls, 1);
+  assert.equal(existsSync(join(root, ".canvas", "wait-start.lock")), false);
+});
+
 test("wait reports an unreachable board with exit 2", async () => {
   const root = await mkdtemp(join(tmpdir(), "boardsimple-none-"));
   const port = await freePort();
