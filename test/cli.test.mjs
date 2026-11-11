@@ -197,8 +197,9 @@ test("a board started by wait outlives the waiting command", { timeout: 30_000 }
           .find((l) => l.includes(`127.0.0.1:${port} `) && l.includes("LISTENING"))?.trim().split(/\s+/).at(-1);
         if (pid) execFileSync("taskkill", ["/pid", pid, "/T", "/F"], { stdio: "ignore" });
       } else {
-        const pids = execFileSync("lsof", ["-ti", `tcp:${port}`], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
-        for (const pid of pids) process.kill(Number(pid));
+        // Only the listening board: this test process holds a connection to the port too.
+        const pids = execFileSync("lsof", ["-ti", `tcp:${port}`, "-sTCP:LISTEN"], { encoding: "utf8" }).trim().split("\n").filter(Boolean);
+        for (const pid of pids) if (Number(pid) !== process.pid) process.kill(Number(pid));
       }
     } catch { /* already gone */ }
   });
