@@ -52,6 +52,8 @@ boardsimple examples/demo
    kleebi käsk vestlusesse.
 5. Agent loeb `.canvas/annotations.json` faili ja muudab HTML-i. Tahvel uueneb automaatselt.
 
+![Terve ring: number ringi, märkus, saatmine ootavale agendile, ekraan uueneb ja märkus märgitakse tehtuks](assets/walkthrough.gif)
+
 Märkused jäävad projekti `.canvas/` kausta. Kaasa see varukoopiatesse; kui tagasiside on
 privaatne, lisa kaust projekti `.gitignore` faili. BoardSimple salvestab tagasiside
 kohalikult; laaditavad HTML-ekraanid võivad siiski küsida väliseid ressursse.
