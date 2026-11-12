@@ -52,6 +52,8 @@ boardsimple examples/demo-en
    **Copy command for agent** and paste it into the chat.
 5. Let the agent read `.canvas/annotations.json` and update the HTML. The board refreshes automatically.
 
+![The whole loop: ring the number, write a note, send it to the waiting agent, the screen updates and the note is marked done](assets/walkthrough.gif)
+
 Annotations stay in the project's `.canvas/` folder. Include that folder in your backups;
 add it to your project's `.gitignore` if the feedback is private. BoardSimple stores feedback
 locally; the HTML screens you load may still request external assets.
