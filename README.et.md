@@ -11,7 +11,7 @@ pakutud UI-de ülevaatamiseks, on BoardSimple kerge võimalus. Vaata HTML-ekraan
 märgi, mida muuta, ja lase agendil tagasiside kohalikust failist lugeda. Kontot ega
 tellimust pole vaja.
 
-![Kolm UI suunda BoardSimple'is koos agendile mõeldud märkusega](assets/demo.png)
+![Kolm UI suunda BoardSimple'is, märkus agendile ja kuulav agent](assets/demo.png)
 
 BoardSimple on varajases järgus kohalik tööriist. See kasutab agendi loodud HTML-faile;
 töötava rakenduse URL-i manustada ei saa. Tegemist on iseseisva projektiga, mis pole
@@ -63,6 +63,8 @@ Käsk avab vajadusel tahvli ja jääb ootama. Märkuste paneel näitab, kas agen
 annab **Saada agendile** talle avatud märkused ja agent asub oma vestluses tööle. Igal saatmisel
 salvestub koopia `.canvas/feedback-<id>.json`, mistõttu hilisem muutmine ei muuda saadetud
 ülesannet. Saatmine ise ei märgi märkusi tehtuks, ei tee commit'i ega avalda midagi.
+
+![Märkus joonistatakse ja saadetakse; agent muudab ekraani ja märgib märkuse tehtuks](assets/send-to-agent.gif)
 
 Proovitud Windowsis T3 Code'i kaudu käivitatud Claude Code'i ja Codexi rakendusega. Teisi agente ja
 süsteeme pole proovitud ning mõni agent peatab kaua kestvad käsud varem;

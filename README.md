@@ -11,7 +11,7 @@ UI proposals, BoardSimple is a lightweight option. Put HTML screens side by side
 should change, and let your agent read the feedback from a local file. No account or
 subscription is required.
 
-![Three UI directions on BoardSimple, with an annotation for the agent](assets/demo.png)
+![Three UI directions on BoardSimple, with a note for the agent and the agent listening](assets/demo.png)
 
 BoardSimple is an early-stage local tool. It works with HTML files your agent creates;
 it does not embed a running application's URL. It is an independent project, unaffiliated
@@ -63,6 +63,8 @@ The command opens the board if needed and waits. The notes panel shows whether a
 listening; while it is, **Send to agent** hands it the open notes and the agent starts working
 in its conversation. Each send saves a snapshot in `.canvas/feedback-<id>.json`, so later edits
 do not change what was sent. Sending does not mark notes done, commit changes or publish anything.
+
+![A note is drawn and sent; the agent changes the screen and marks the note done](assets/send-to-agent.gif)
 
 Tested on Windows with Claude Code run through T3 Code and with the Codex app. Other agents and
 systems are untested, and some agents stop long-running commands early;
