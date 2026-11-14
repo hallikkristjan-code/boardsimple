@@ -284,8 +284,10 @@ test("POST /api/open-window opens no second window while a board window is conne
   events.on("error", () => {});
   try {
     await new Promise((r) => events.on("response", r));
-    const r = await fetch(s.url + "/api/open-window", { method: "POST" });
-    assert.equal(r.status, 409);
+    // Twice: every click on the board link asks again, and none may add a window.
+    for (let i = 0; i < 2; i++) {
+      assert.equal((await fetch(s.url + "/api/open-window", { method: "POST" })).status, 409);
+    }
     assert.deepEqual(opened, []);
   } finally {
     events.destroy();
