@@ -35,7 +35,9 @@ Kopeeri see plokk projekti `CLAUDE.md` / `AGENTS.md` faili, kui projektis kasuta
 5. Kui käsk ütleb, et ühtki tahvlit pole kättesaadav, võib liivakast kohalikke ühendusi
    blokeerida: loe `.canvas/annotations.json`, kui kasutaja käsu kleebib.
 6. Kui käsk ütleb, et tahvel ei saa tagasisidet agendile anda, töötab vanem tahvel: palu
-   kasutajal see sulgeda ja käivita käsk uuesti.
+   kasutajal see sulgeda, uuenda paigaldus (`npm i -g boardsimple@latest`) ja käivita käsk
+   uuesti. Ära anna kasutajale vana tahvli aadressi uuesti avamiseks: vanemas versioonis avab
+   iga avamine uue akna.
 
 ## Märkused ("vaata märkused üle" / "review the notes")
 

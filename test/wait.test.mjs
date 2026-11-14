@@ -61,6 +61,8 @@ test("findBoard recognises an older board without attaching", async (t) => {
   const err = collect();
   assert.equal(await runWait({ root, port, open: false, startBoard: noStart, out: collect(), err }), 2);
   assert.match(err.lines.join("\n"), /cannot hand feedback to an agent \(HTTP old version\)/);
+  // Closing alone brings the same old version back: the message must name the update.
+  assert.match(err.lines.join("\n"), /npm i -g boardsimple@latest/);
 });
 
 test("wait opens a window only when the board has none", async (t) => {

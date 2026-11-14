@@ -149,7 +149,7 @@ export async function runWait({ root, port = DEFAULT_PORT, timeoutSeconds = 0, o
     return 2;
   };
   const outdated = (url, status) => {
-    err(`BoardSimple: the board at ${url} cannot hand feedback to an agent (HTTP ${status}). Ask the user to close that board and run the command again.`);
+    err(`BoardSimple: the board at ${url} cannot hand feedback to an agent (HTTP ${status}). It is an older version: ask the user to close that board, update with "npm i -g boardsimple@latest", then run the command again. Do not hand the user that address again.`);
     return 2;
   };
 

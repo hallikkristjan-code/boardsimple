@@ -32,7 +32,9 @@ Copy this block into a project's `CLAUDE.md` / `AGENTS.md` when the project uses
 5. If it reports that no board is reachable, a sandbox may block local connections: read
    `.canvas/annotations.json` when the user pastes the command.
 6. If it reports that the board cannot hand feedback to an agent, an older board is running:
-   ask the user to close it, then run the command again.
+   ask the user to close it, update the install (`npm i -g boardsimple@latest`), then run the
+   command again. Do not give the user the old board's address to open again: in an older
+   version every opening adds another window.
 
 ## Notes ("review the notes")
 
