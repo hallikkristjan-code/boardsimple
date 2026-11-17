@@ -81,6 +81,7 @@ export function setView(v) {
   worldEl.dataset.labels = labelMode(view.scale);
   zoomEl.textContent = `${Math.round(view.scale * 100)}%`;
   syncLoaded();
+  lookSoon();
   for (const cb of viewListeners) cb(view);
 }
 
@@ -210,6 +211,7 @@ function syncBoards(next) {
   }
   screens = next;
   relayout();
+  markFresh();
   for (const cb of screensListeners) cb(screens);
 }
 
@@ -339,6 +341,71 @@ document.getElementById("theme").addEventListener("click", () => {
   localStorage.setItem("boardsimple-theme", next);
 });
 window.addEventListener("resize", () => setView(view));
+
+// --- new boards ---------------------------------------------------------
+// A board added since the user last looked stays marked until they have looked
+// at it: rested the pointer on it, or had it large on screen in the focused window.
+const SEEN_KEY = "boardsimple-seen:";
+const LOOK_MS = 1200;
+const HOVER_MS = 600;
+let known = null; // files the user has seen; null until the first load
+let lookTimer = null;
+let hover = { file: null, timer: null };
+
+function saveKnown() {
+  try { localStorage.setItem(SEEN_KEY + root, JSON.stringify([...known])); } catch { /* private window: marks last this session */ }
+}
+
+function markFresh() {
+  if (!known) {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(SEEN_KEY + root)); } catch { /* none */ }
+    // First visit to this project: what is already there is not news.
+    known = new Set(Array.isArray(saved) ? saved : screens.map((s) => s.file));
+    saveKnown();
+  }
+  for (const [file, rec] of boardEls) rec.wrap.classList.toggle("fresh", !known.has(file));
+  lookSoon();
+}
+
+function seen(file) {
+  if (!known || known.has(file)) return;
+  known.add(file);
+  saveKnown();
+  boardEls.get(file)?.wrap.classList.remove("fresh");
+}
+
+/** Large on screen: mostly visible in the free area and a real share of it. */
+function shownLarge(b) {
+  const { w, h } = viewportSize();
+  const c = chrome();
+  const r = { left: b.x * view.scale + view.tx, top: b.y * view.scale + view.ty, w: b.w * view.scale, h: b.h * view.scale };
+  const vw = Math.min(r.left + r.w, w - c.right) - Math.max(r.left, c.left);
+  const vh = Math.min(r.top + r.h, h - c.bottom) - Math.max(r.top, c.top);
+  if (vw <= 0 || vh <= 0) return false;
+  const freeW = w - c.left - c.right;
+  const freeH = h - c.top - c.bottom;
+  return (vw * vh) / (r.w * r.h) >= 0.6 && (vw >= freeW * 0.35 || vh >= freeH * 0.5);
+}
+
+function lookSoon() {
+  clearTimeout(lookTimer);
+  if (!known || !document.querySelector(".board.fresh")) return;
+  lookTimer = setTimeout(() => {
+    if (document.visibilityState !== "visible" || !document.hasFocus()) return;
+    for (const b of layout.boards) if (!known.has(b.file) && shownLarge(b)) seen(b.file);
+  }, LOOK_MS);
+}
+
+viewportEl.addEventListener("pointermove", (e) => {
+  const file = boardAt(localPoint(e))?.file ?? null;
+  if (file === hover.file) return;
+  clearTimeout(hover.timer);
+  hover = { file, timer: file && !known?.has(file) ? setTimeout(() => seen(file), HOVER_MS) : null };
+});
+viewportEl.addEventListener("pointerleave", () => { clearTimeout(hover.timer); hover = { file: null, timer: null }; });
+window.addEventListener("focus", lookSoon);
+document.addEventListener("visibilitychange", lookSoon);
 
 // --- live updates -------------------------------------------------------
 // The app window says so; a tab in the user's browser does not count as the board window.

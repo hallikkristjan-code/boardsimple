@@ -101,6 +101,11 @@ html[data-theme="dark"] #theme .moon { display: block; }
 #world[data-labels="none"] .board:hover .board-label { display: block; max-width: none; padding: 2px 8px; margin-bottom: 4px; border-radius: var(--r-control); background: var(--surface); color: var(--ink); box-shadow: var(--lift); }
 .board iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--screen); box-shadow: var(--lift-page); pointer-events: none; }
 .tool-vali:not(.panning) .board iframe { pointer-events: auto; }
+/* A board the user has not looked at yet. Counter-scaled so it reads at any zoom. */
+.board.fresh iframe { outline: calc(3px * var(--inv, 1)) solid var(--accent); outline-offset: calc(4px * var(--inv, 1)); }
+.board.fresh .board-label { color: var(--accent); font-weight: 600; }
+.board.fresh .board-label::before { content: "● "; }
+#world[data-labels="none"] .board.fresh .board-label { display: block; max-width: none; }
 
 /* marks */
 .ann-ring { fill: color-mix(in srgb, var(--mark, var(--ring)) 8%, transparent); stroke: var(--mark, var(--ring)); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
