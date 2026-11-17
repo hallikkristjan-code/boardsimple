@@ -341,7 +341,8 @@ document.getElementById("theme").addEventListener("click", () => {
 window.addEventListener("resize", () => setView(view));
 
 // --- live updates -------------------------------------------------------
-const events = new EventSource("/api/events");
+// The app window says so; a tab in the user's browser does not count as the board window.
+const events = new EventSource(matchMedia("(display-mode: browser)").matches ? "/api/events" : "/api/events?window=1");
 events.addEventListener("screens", () => loadScreens().catch(console.error));
 events.addEventListener("error", () => {
   // The browser retries network errors by itself, but gives up for good on a bad response.

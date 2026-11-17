@@ -128,13 +128,13 @@ process.on("SIGINT", () => void stop());
 process.on("SIGTERM", () => void stop());
 
 // Boards started by `boardsimple wait` stop once nobody uses them: no board
-// window and no waiting agent for the whole idle period.
+// page (window or tab) and no waiting agent for the whole idle period.
 if (args.values["idle-exit"]) {
   const idleMs = Number(args.values["idle-exit"]) * 1000;
   let idleSince = Date.now();
   setInterval(async () => {
-    const { listening, windows } = await server.activity();
-    if (listening || windows > 0) idleSince = Date.now();
+    const { listening, pages } = await server.activity();
+    if (listening || pages > 0) idleSince = Date.now();
     else if (Date.now() - idleSince >= idleMs) void stop();
   }, Math.min(60_000, idleMs / 2)).unref();
 }
