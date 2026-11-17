@@ -21,6 +21,9 @@ test("counts use the singular for one", () => {
   assert.equal(MESSAGES.en.screens(2), "2 screens");
   assert.equal(MESSAGES.et.screens(1), "1 ekraan");
   assert.equal(MESSAGES.et.screens(2), "2 ekraani");
+  assert.equal(MESSAGES.en.fresh(1), "1 new");
+  assert.equal(MESSAGES.et.fresh(1), "1 uus");
+  assert.equal(MESSAGES.et.fresh(2), "2 uut");
 });
 
 test("pickLang prefers the saved choice, then any Estonian browser language, then English", () => {

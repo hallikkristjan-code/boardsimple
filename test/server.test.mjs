@@ -280,7 +280,7 @@ test("POST /api/open-window asks the launcher for a window, once per burst", asy
 test("POST /api/open-window opens no second window while a board window is connected", async () => {
   const opened = [];
   const s = await startServer({ root, port: 0, openWindow: (url) => opened.push(url) });
-  const events = http.get(s.url + "/api/events", { agent: false });
+  const events = http.get(s.url + "/api/events?window=1", { agent: false });
   events.on("error", () => {});
   try {
     await new Promise((r) => events.on("response", r));
@@ -291,6 +291,22 @@ test("POST /api/open-window opens no second window while a board window is conne
     assert.deepEqual(opened, []);
   } finally {
     events.destroy();
+    await s.close();
+  }
+});
+
+test("a board tab in a normal browser is not a window: the hand-over and the count ignore it", async () => {
+  const opened = [];
+  const s = await startServer({ root, port: 0, openWindow: (url) => opened.push(url) });
+  const tab = http.get(s.url + "/api/events", { agent: false });
+  tab.on("error", () => {});
+  try {
+    await new Promise((r) => tab.on("response", r));
+    assert.equal((await (await fetch(s.url + "/api/agent")).json()).windows, 0);
+    assert.equal((await fetch(s.url + "/api/open-window", { method: "POST" })).status, 204);
+    assert.deepEqual(opened, [s.url]);
+  } finally {
+    tab.destroy();
     await s.close();
   }
 });

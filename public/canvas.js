@@ -16,6 +16,7 @@ const zoomEl = document.getElementById("zoom");
 const emptyEl = document.getElementById("empty");
 const connEl = document.getElementById("conn");
 const countEl = document.getElementById("count");
+const freshEl = document.getElementById("fresh");
 
 let view = { tx: 0, ty: 0, scale: 1 };
 let tool = "kasi";
@@ -81,6 +82,7 @@ export function setView(v) {
   worldEl.dataset.labels = labelMode(view.scale);
   zoomEl.textContent = `${Math.round(view.scale * 100)}%`;
   syncLoaded();
+  lookSoon();
   for (const cb of viewListeners) cb(view);
 }
 
@@ -95,12 +97,12 @@ function viewportSize() {
   return { w: r.width, h: r.height };
 }
 
-export function fit() {
+export function fit(boards = layout.boards) {
   // Reserve room above each board for the board + group labels (~64 screen px at 100%).
   const { w, h } = viewportSize();
   const c = chrome();
   const free = { w: w - c.left - c.right, h: h - c.top - c.bottom };
-  const v = fitAll(layout.boards.map((b) => ({ ...b, y: b.y - 64, h: b.h + 64 })), free, 16);
+  const v = fitAll(boards.map((b) => ({ ...b, y: b.y - 64, h: b.h + 64 })), free, 16);
   setView({ ...v, tx: v.tx + c.left, ty: v.ty + c.top });
 }
 
@@ -210,6 +212,7 @@ function syncBoards(next) {
   }
   screens = next;
   relayout();
+  markFresh();
   for (const cb of screensListeners) cb(screens);
 }
 
@@ -329,7 +332,7 @@ for (const b of document.querySelectorAll("#colors button")) {
   b.style.setProperty("--c", b.dataset.color);
   b.addEventListener("click", () => setColor(b.dataset.color));
 }
-document.getElementById("fit").addEventListener("click", fit);
+document.getElementById("fit").addEventListener("click", () => fit());
 // Theme: no attribute = follow the system; a click picks the opposite of what is showing and remembers it.
 document.getElementById("theme").addEventListener("click", () => {
   const dark = getComputedStyle(document.documentElement).colorScheme === "dark" ||
@@ -340,8 +343,89 @@ document.getElementById("theme").addEventListener("click", () => {
 });
 window.addEventListener("resize", () => setView(view));
 
+// --- new boards ---------------------------------------------------------
+// A board added since the user last looked stays marked until they have looked
+// at it: rested the pointer on it, or had it large on screen in the focused window.
+const SEEN_KEY = "boardsimple-seen:";
+const LOOK_MS = 1200;
+const HOVER_MS = 600;
+let known = null; // files the user has seen; null until the first load
+let lookTimer = null;
+let hover = { file: null, timer: null };
+
+function saveKnown() {
+  try { localStorage.setItem(SEEN_KEY + root, JSON.stringify([...known])); } catch { /* private window: marks last this session */ }
+}
+
+function markFresh() {
+  if (!known) {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(SEEN_KEY + root)); } catch { /* none */ }
+    // First visit to this project: what is already there is not news.
+    known = new Set(Array.isArray(saved) ? saved : screens.map((s) => s.file));
+    saveKnown();
+  }
+  for (const [file, rec] of boardEls) rec.wrap.classList.toggle("fresh", !known.has(file));
+  showFresh();
+  lookSoon();
+}
+
+const freshBoards = () => (known ? layout.boards.filter((b) => !known.has(b.file)) : []);
+
+function showFresh() {
+  const n = freshBoards().length;
+  freshEl.hidden = n === 0;
+  freshEl.textContent = t("fresh", n);
+}
+
+function seen(file) {
+  if (!known || known.has(file)) return;
+  known.add(file);
+  saveKnown();
+  boardEls.get(file)?.wrap.classList.remove("fresh");
+  showFresh();
+}
+
+/** Large on screen: mostly visible in the free area and a real share of it. */
+function shownLarge(b) {
+  const { w, h } = viewportSize();
+  const c = chrome();
+  const r = { left: b.x * view.scale + view.tx, top: b.y * view.scale + view.ty, w: b.w * view.scale, h: b.h * view.scale };
+  const vw = Math.min(r.left + r.w, w - c.right) - Math.max(r.left, c.left);
+  const vh = Math.min(r.top + r.h, h - c.bottom) - Math.max(r.top, c.top);
+  if (vw <= 0 || vh <= 0) return false;
+  const freeW = w - c.left - c.right;
+  const freeH = h - c.top - c.bottom;
+  return (vw * vh) / (r.w * r.h) >= 0.6 && (vw >= freeW * 0.35 || vh >= freeH * 0.5);
+}
+
+function lookSoon() {
+  clearTimeout(lookTimer);
+  if (!known || !document.querySelector(".board.fresh")) return;
+  lookTimer = setTimeout(() => {
+    if (document.visibilityState !== "visible" || !document.hasFocus()) return;
+    for (const b of layout.boards) if (!known.has(b.file) && shownLarge(b)) seen(b.file);
+  }, LOOK_MS);
+}
+
+viewportEl.addEventListener("pointermove", (e) => {
+  const file = boardAt(localPoint(e))?.file ?? null;
+  if (file === hover.file) return;
+  clearTimeout(hover.timer);
+  hover = { file, timer: file && !known?.has(file) ? setTimeout(() => seen(file), HOVER_MS) : null };
+});
+viewportEl.addEventListener("pointerleave", () => { clearTimeout(hover.timer); hover = { file: null, timer: null }; });
+// Zoom to the first new board; it becomes seen there, so the next click goes on to the next.
+freshEl.addEventListener("click", () => {
+  const b = freshBoards()[0];
+  if (b) fit([b]);
+});
+window.addEventListener("focus", lookSoon);
+document.addEventListener("visibilitychange", lookSoon);
+
 // --- live updates -------------------------------------------------------
-const events = new EventSource("/api/events");
+// The app window says so; a tab in the user's browser does not count as the board window.
+const events = new EventSource(matchMedia("(display-mode: browser)").matches ? "/api/events" : "/api/events?window=1");
 events.addEventListener("screens", () => loadScreens().catch(console.error));
 events.addEventListener("error", () => {
   // The browser retries network errors by itself, but gives up for good on a bad response.
@@ -376,6 +460,7 @@ document.body.append(gpuProbe);
 
 initLang();
 onLangChange(showCount);
+onLangChange(showFresh);
 setTool("kasi");
 setColor(localStorage.getItem(COLOR_KEY));
 setView(view);
