@@ -58,6 +58,7 @@ button:active { transform: scale(0.96); }
 #title { display: flex; align-items: baseline; gap: 10px; min-width: 0; padding: 8px 14px; }
 #project { margin: 0; font: 600 13px/1.5 var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
 #count { color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+#fresh { align-self: center; padding: 1px 8px; border: 0; border-radius: var(--r-control); background: var(--accent); color: var(--surface); font: inherit; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; cursor: pointer; }
 #conn { padding: 8px 14px; background: var(--surface); box-shadow: var(--lift); border-radius: var(--r-island); color: var(--danger); }
 #view { display: flex; align-items: center; gap: 2px; padding: 4px; }
 #view button { padding: 4px 10px; border-radius: var(--r-control); color: var(--ink-2); white-space: nowrap; }

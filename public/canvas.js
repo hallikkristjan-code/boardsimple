@@ -16,6 +16,7 @@ const zoomEl = document.getElementById("zoom");
 const emptyEl = document.getElementById("empty");
 const connEl = document.getElementById("conn");
 const countEl = document.getElementById("count");
+const freshEl = document.getElementById("fresh");
 
 let view = { tx: 0, ty: 0, scale: 1 };
 let tool = "kasi";
@@ -96,12 +97,12 @@ function viewportSize() {
   return { w: r.width, h: r.height };
 }
 
-export function fit() {
+export function fit(boards = layout.boards) {
   // Reserve room above each board for the board + group labels (~64 screen px at 100%).
   const { w, h } = viewportSize();
   const c = chrome();
   const free = { w: w - c.left - c.right, h: h - c.top - c.bottom };
-  const v = fitAll(layout.boards.map((b) => ({ ...b, y: b.y - 64, h: b.h + 64 })), free, 16);
+  const v = fitAll(boards.map((b) => ({ ...b, y: b.y - 64, h: b.h + 64 })), free, 16);
   setView({ ...v, tx: v.tx + c.left, ty: v.ty + c.top });
 }
 
@@ -331,7 +332,7 @@ for (const b of document.querySelectorAll("#colors button")) {
   b.style.setProperty("--c", b.dataset.color);
   b.addEventListener("click", () => setColor(b.dataset.color));
 }
-document.getElementById("fit").addEventListener("click", fit);
+document.getElementById("fit").addEventListener("click", () => fit());
 // Theme: no attribute = follow the system; a click picks the opposite of what is showing and remembers it.
 document.getElementById("theme").addEventListener("click", () => {
   const dark = getComputedStyle(document.documentElement).colorScheme === "dark" ||
@@ -365,7 +366,16 @@ function markFresh() {
     saveKnown();
   }
   for (const [file, rec] of boardEls) rec.wrap.classList.toggle("fresh", !known.has(file));
+  showFresh();
   lookSoon();
+}
+
+const freshBoards = () => (known ? layout.boards.filter((b) => !known.has(b.file)) : []);
+
+function showFresh() {
+  const n = freshBoards().length;
+  freshEl.hidden = n === 0;
+  freshEl.textContent = t("fresh", n);
 }
 
 function seen(file) {
@@ -373,6 +383,7 @@ function seen(file) {
   known.add(file);
   saveKnown();
   boardEls.get(file)?.wrap.classList.remove("fresh");
+  showFresh();
 }
 
 /** Large on screen: mostly visible in the free area and a real share of it. */
@@ -404,6 +415,11 @@ viewportEl.addEventListener("pointermove", (e) => {
   hover = { file, timer: file && !known?.has(file) ? setTimeout(() => seen(file), HOVER_MS) : null };
 });
 viewportEl.addEventListener("pointerleave", () => { clearTimeout(hover.timer); hover = { file: null, timer: null }; });
+// Zoom to the first new board; it becomes seen there, so the next click goes on to the next.
+freshEl.addEventListener("click", () => {
+  const b = freshBoards()[0];
+  if (b) fit([b]);
+});
 window.addEventListener("focus", lookSoon);
 document.addEventListener("visibilitychange", lookSoon);
 
@@ -444,6 +460,7 @@ document.body.append(gpuProbe);
 
 initLang();
 onLangChange(showCount);
+onLangChange(showFresh);
 setTool("kasi");
 setColor(localStorage.getItem(COLOR_KEY));
 setView(view);
